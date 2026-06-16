@@ -46,6 +46,7 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true # デフォルト値を明示的に宣言
       InstanceTenancy: default # デフォルト値を明示的に宣言
+
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -88,6 +89,7 @@ Resources:
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateDBSubnetCCidr ]
       AvailabilityZone: !Select [ 2, !GetAZs '' ]
       MapPublicIpOnLaunch: false
+
   VPCFlowLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -122,6 +124,7 @@ Resources:
       LogGroupName: !Ref VPCFlowLogGroup
       DeliverLogsPermissionArn: !GetAtt VPCFlowLogsRole.Arn
       MaxAggregationInterval: 600
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -157,6 +160,7 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
+
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
