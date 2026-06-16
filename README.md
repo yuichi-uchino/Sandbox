@@ -30,6 +30,14 @@ aws cloudformation deploy \
   --region ap-northeast-1
 ```
 
+### 変更内容の確認
+```bash
+aws cloudformation describe-change-set \
+  --change-set-name {ChangeSet名またはARN} \
+  --region ap-northeast-1 \
+  > "changeset_${ts}.json"
+```
+
 ### 問題なければ実行
 ```bash
 aws cloudformation deploy \
