@@ -88,5 +88,9 @@ Resources:
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateDBSubnetCCidr ]
       AvailabilityZone: !Select [ 2, !GetAZs '' ]
       MapPublicIpOnLaunch: false
-
+  VPCFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/vpcflowlogs/${AWS::StackName}
+      RetentionInDays: 7
 
