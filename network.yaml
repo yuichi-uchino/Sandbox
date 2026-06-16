@@ -15,10 +15,28 @@ Mappings:
   EnvironmentMap:
     dev:
       VpcCidr: 10.12.0.0/16
+      PublicSubnetACidr: 10.12.1.0/24
+      PublicSubnetCCidr: 10.12.2.0/24
+      PrivateAppSubnetACidr: 10.12.11.0/24
+      PrivateAppSubnetCCidr: 10.12.12.0/24
+      PrivateDBSubnetACidr: 10.12.21.0/24
+      PrivateDBSubnetCCidr: 10.12.22.0/24
     stg:
       VpcCidr: 10.11.0.0/16
+      PublicSubnetACidr: 10.11.1.0/24
+      PublicSubnetCCidr: 10.11.2.0/24
+      PrivateAppSubnetACidr: 10.11.11.0/24
+      PrivateAppSubnetCCidr: 10.11.12.0/24
+      PrivateDBSubnetACidr: 10.11.21.0/24
+      PrivateDBSubnetCCidr: 10.11.22.0/24
     prod:
       VpcCidr: 10.10.0.0/16
+      PublicSubnetACidr: 10.10.1.0/24
+      PublicSubnetCCidr: 10.10.2.0/24
+      PrivateAppSubnetACidr: 10.10.11.0/24
+      PrivateAppSubnetCCidr: 10.10.12.0/24
+      PrivateDBSubnetACidr: 10.10.21.0/24
+      PrivateDBSubnetCCidr: 10.10.22.0/24
 
 Resources:
   VPC:
@@ -28,4 +46,47 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true # デフォルト値を明示的に宣言
       InstanceTenancy: default # デフォルト値を明示的に宣言
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PublicSubnetACidr]
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PublicSubnetCCidr ]
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+  PrivateAppSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateAppSubnetACidr]
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+  PrivateAppSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateAppSubnetCCidr ]
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      MapPublicIpOnLaunch: false
+  PrivateDBSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateDBSubnetACidr]
+      AvailabilityZone: !Select [2, !GetAZs '']
+      MapPublicIpOnLaunch: false
+  PrivateDBSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateDBSubnetCCidr ]
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      MapPublicIpOnLaunch: false
+
 
