@@ -35,7 +35,7 @@ aws cloudformation deploy \
 aws cloudformation describe-change-set \
   --change-set-name {ChangeSet名またはARN} \
   --region ap-northeast-1 \
-  > "changeset_${ts}.json"
+  > "changeset.json"
 ```
 
 ### 問題なければ実行
