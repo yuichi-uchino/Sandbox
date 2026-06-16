@@ -46,3 +46,10 @@ aws cloudformation deploy \
   --parameter-overrides Environment={環境} \
   --region ap-northeast-1
 ```
+
+### スタック削除
+```bash
+aws cloudformation delete-stack \
+  --stack-name {スタック名} \
+  --region ap-northeast-1
+```
