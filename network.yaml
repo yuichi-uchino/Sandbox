@@ -188,3 +188,19 @@ Resources:
     Properties:
       SubnetId: !Ref PrivateDBSubnetC
       RouteTableId: !Ref PrivateRouteTable
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ALB
+      VpcId: !Ref VPC
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for application servers
+      VpcId: !Ref VPC
+  DBASecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for database servers
+      VpcId: !Ref VPC
