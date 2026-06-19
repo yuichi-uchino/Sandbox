@@ -245,16 +245,16 @@ Resources:
     Properties:
       GroupId: !Ref AppSecurityGroup
       IpProtocol: tcp
-      FromPort: 3306
-      ToPort: 3306
+      FromPort: 5432
+      ToPort: 5432
       DestinationSecurityGroupId: !Ref DBSecurityGroup
   DBIngressFromAppRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref DBSecurityGroup
       IpProtocol: tcp
-      FromPort: 3306
-      ToPort: 3306
+      FromPort: 5432
+      ToPort: 5432
       SourceSecurityGroupId: !Ref AppSecurityGroup
 
 Outputs:
