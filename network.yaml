@@ -237,3 +237,55 @@ Resources:
       FromPort: 3306
       ToPort: 3306
       SourceSecurityGroupId: !Ref AppSecurityGroup
+
+Outputs:
+  VPCId:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCId"
+
+  PublicSubnetAId:
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnetAId"
+
+  PublicSubnetCId:
+    Value: !Ref PublicSubnetC
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnetCId"
+
+  PrivateAppSubnetAId:
+    Value: !Ref PrivateAppSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateAppSubnetAId"
+
+  PrivateAppSubnetCId:
+    Value: !Ref PrivateAppSubnetC
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateAppSubnetCId"
+
+  PrivateDBSubnetAId:
+    Value: !Ref PrivateDBSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateDBSubnetAId"
+
+  PrivateDBSubnetCId:
+    Value: !Ref PrivateDBSubnetC
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateDBSubnetCId"
+
+  ALBSecurityGroupId:
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ALBSecurityGroupId"
+
+  AppSecurityGroupId:
+    Value: !Ref AppSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-AppSecurityGroupId"
+
+  DBSecurityGroupId:
+    Value: !Ref DBSecurityGroup
+    Description: "Database Security Group ID"
+    Export:
+      Name: !Sub "${AWS::StackName}-DBSecurityGroupId"
