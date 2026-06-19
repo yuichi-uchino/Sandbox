@@ -59,14 +59,14 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PublicSubnetCCidr ]
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: true
   PrivateAppSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateAppSubnetACidr]
-      AvailabilityZone: !Select [1, !GetAZs '']
+      AvailabilityZone: !Select [0, !GetAZs '']
       MapPublicIpOnLaunch: false
   PrivateAppSubnetC:
     Type: AWS::EC2::Subnet
@@ -80,14 +80,14 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateDBSubnetACidr]
-      AvailabilityZone: !Select [2, !GetAZs '']
+      AvailabilityZone: !Select [0, !GetAZs '']
       MapPublicIpOnLaunch: false
   PrivateDBSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateDBSubnetCCidr ]
-      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: false
 
   VPCFlowLogGroup:
