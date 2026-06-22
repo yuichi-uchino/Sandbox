@@ -293,6 +293,11 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-PrivateDBSubnetCId"
 
+  PrivateRouteTableId:
+    Value: !Ref PrivateRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateRouteTableId"
+
   ALBSecurityGroupId:
     Value: !Ref ALBSecurityGroup
     Export:
