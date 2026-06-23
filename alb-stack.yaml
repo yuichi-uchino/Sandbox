@@ -68,3 +68,27 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref AppTargetGroup
+
+Outputs:
+  AlbArn:
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub ${AWS::StackName}-AlbArn
+
+  AlbDnsName:
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-AlbDnsName
+
+  AlbUrl:
+    Value: !Sub http://${ApplicationLoadBalancer.DNSName}
+
+  TargetGroupArn:
+    Value: !Ref AppTargetGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-TargetGroupArn
+
+  ListenerArn:
+    Value: !Ref HttpListener
+    Export:
+      Name: !Sub ${AWS::StackName}-HttpListenerArn
