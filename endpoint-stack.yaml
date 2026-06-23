@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Environment:
+    Type: String
+    Description: "Deployment environment: dev, stg, or prod"
+    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+  NetworkStackName:
+    Type: String
+    Description: "The name of the network stack to reference"
+    Default: network-stack
+
+Resources:
+  EcrApiEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+      # todo ECRのポリシードキュメントで対象のレジストリを明示する
