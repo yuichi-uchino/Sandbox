@@ -22,7 +22,7 @@ Parameters:
 
   HealthCheckPath:
     Type: String
-    Default: /health
+    Default: /actuator/health
 
 Resources:
   ApplicationLoadBalancer:
@@ -33,10 +33,38 @@ Resources:
       Scheme: internet-facing
       IpAddressType: ipv4
       SecurityGroups:
-        - !ImportValue:
+        - Fn::ImportValue:
             !Sub ${NetworkStackName}-ALBSecurityGroupId
       Subnets:
-        - !ImportValue:
+        - Fn::ImportValue:
             !Sub ${NetworkStackName}-PublicSubnetAId
-        - !ImportValue:
+        - Fn::ImportValue:
             !Sub ${NetworkStackName}-PublicSubnetCId
+
+  AppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${AWS::StackName}-tg
+      TargetType: instance
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      Protocol: HTTP
+      Port: !Ref AppPort
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: !Ref HealthCheckPath
+      Matcher:
+        HttpCode: 200
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      HealthCheckTimeoutSeconds: 5
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AppTargetGroup
