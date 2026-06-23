@@ -5,6 +5,10 @@
 Cloud Formationを使用して、AWS上にサンドボックス環境を構築するためのリポジトリです。
 ALB + ASG + EC2 + Docker + ECR Pull + NATなしVPC Endpoint構成でリソースを作成します。
 
+## 課金対象のリソースを管理しているスタック
+- alb-stack
+- endpoint-stack
+
 ## よく使うコマンド
 
 ### ログインと確認
