@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Environment:
+    Type: String
+    Description: "Deployment environment: dev, stg, or prod"
+    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+  NetworkStackName:
+    Type: String
+    Description: "The name of the network stack to reference"
+    Default: network-stack
+
+  AppPort:
+    Type: Number
+    Default: 8080
+
+  HealthCheckPath:
+    Type: String
+    Default: /health
+
+Resources:
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${AWS::StackName}-alb
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      SecurityGroups:
+        - !ImportValue:
+            !Sub ${NetworkStackName}-ALBSecurityGroupId
+      Subnets:
+        - !ImportValue:
+            !Sub ${NetworkStackName}-PublicSubnetAId
+        - !ImportValue:
+            !Sub ${NetworkStackName}-PublicSubnetCId
