@@ -34,4 +34,21 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
-      # todo ECRのポリシードキュメントで対象のレジストリを明示する
+
+  EcrDkrEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-EndpointSecurityGroupId
