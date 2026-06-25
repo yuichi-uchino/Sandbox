@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+###
+# kmsはスタックを削除してもすぐに削除されず、削除保護期間が発生する。
+# そのため、kms管理専用のスタックにて管理を行う。
+# また、本来は各リソースに対してkmsキーを個別に作成することが推奨されるが、
+# 過剰コストのため、おおまかなリソース単位で作成する予定。
+###
+Description: KMS keys for shared security resources
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+Resources:
+  CloudWatchLogsKmsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: !Sub KMS key for CloudWatch Logs - ${Environment}
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnableAccountRootPermissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+          - Sid: AllowCloudWatchLogsUseKey
+            Effect: Allow
+            Principal:
+              Service: !Sub logs.${AWS::Region}.${AWS::URLSuffix}
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub logs.${AWS::Region}.${AWS::URLSuffix}
+
+  CloudWatchLogsKmsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${AWS::StackName}/cloudwatch-logs
+      TargetKeyId: !Ref CloudWatchLogsKmsKey
+
+Outputs:
+  CloudWatchLogsKmsKeyArn:
+    Description: CloudWatch Logs KMS key ARN
+    Value: !GetAtt CloudWatchLogsKmsKey.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudWatchLogsKmsKeyArn
