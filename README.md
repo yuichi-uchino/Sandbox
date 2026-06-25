@@ -40,6 +40,11 @@ aws cloudformation deploy \
 --capabilities CAPABILITY_IAM
 ````
 
+### 名前付きIAMリソースを作る場合は、追加のプロパティが必要
+```bash
+--capabilities CAPABILITY_NAMED_IAM
+```
+
 ### 変更内容の確認
 ```bash
 aws cloudformation describe-change-set \
