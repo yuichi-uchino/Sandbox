@@ -101,8 +101,9 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/vpcflowlogs/${AWS::StackName}
       RetentionInDays: 7
-      KmsKeyId: !ImportValue
-        Fn::Sub: ${kmsStackName}-CloudWatchLogsKmsKeyArn
+      KmsKeyId:
+        Fn::ImportValue:
+          !Sub ${kmsStackName}-CloudWatchLogsKmsKeyArn
 
   VPCFlowLogsRole:
     Type: AWS::IAM::Role
