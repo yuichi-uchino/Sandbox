@@ -52,3 +52,21 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+
+  LogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-EndpointSecurityGroupId
