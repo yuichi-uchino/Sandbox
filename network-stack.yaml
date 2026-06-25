@@ -173,37 +173,45 @@ Resources:
       SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
 
-  PrivateRouteTable:
+  PrivateAppRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-private-rt
+          Value: !Sub ${AWS::StackName}-private-app-rt
+
+  PrivateDBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-private-db-rt
 
   PrivateAppSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateAppSubnetA
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateAppRouteTable
 
   PrivateAppSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateAppSubnetC
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateAppRouteTable
 
   PrivateDBSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateDBSubnetA
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateDBRouteTable
 
   PrivateDBSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateDBSubnetC
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateDBRouteTable
 
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -341,10 +349,15 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-PrivateDBSubnetCId
 
-  PrivateRouteTableId:
-    Value: !Ref PrivateRouteTable
+  PrivateAppRouteTableId:
+    Value: !Ref PrivateAppRouteTable
     Export:
-      Name: !Sub ${AWS::StackName}-PrivateRouteTableId
+      Name: !Sub ${AWS::StackName}-PrivateAppRouteTableId
+
+  PrivateDBRouteTableId:
+    Value: !Ref PrivateDBRouteTable
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateDBRouteTableId
 
   ALBSecurityGroupId:
     Value: !Ref ALBSecurityGroup

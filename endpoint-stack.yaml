@@ -70,6 +70,7 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+
   S3GatewayEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -80,4 +81,4 @@ Resources:
       ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
       RouteTableIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateRouteTableId
+            !Sub ${NetworkStackName}-PrivateAppRouteTableId
