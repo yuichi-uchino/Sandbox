@@ -52,48 +52,42 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PublicSubnetACidr]
-      AvailabilityZone: !Select [0, !GetAZs '']
-      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select ["0", !GetAZs '']
 
   PublicSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PublicSubnetCCidr ]
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [ "1", !GetAZs '' ]
 
   PrivateAppSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateAppSubnetACidr]
-      AvailabilityZone: !Select [0, !GetAZs '']
-      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select ["0", !GetAZs '']
 
   PrivateAppSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateAppSubnetCCidr ]
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [ "1", !GetAZs '' ]
 
   PrivateDBSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateDBSubnetACidr]
-      AvailabilityZone: !Select [0, !GetAZs '']
-      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select ["0", !GetAZs '']
 
   PrivateDBSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateDBSubnetCCidr ]
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [ "1", !GetAZs '' ]
 
   VPCFlowLogGroup:
     Type: AWS::Logs::LogGroup
