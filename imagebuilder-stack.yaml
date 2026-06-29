@@ -34,3 +34,58 @@ Resources:
         - Description: Allow all outbound traffic
           IpProtocol: -1
           CidrIp: 0.0.0.0/0
+
+  ImageBuilderInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-imagebuilder-instance-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  ImageBuilderInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${AWS::StackName}-imagebuilder-instance-profile
+      Roles:
+        - !Ref ImageBuilderInstanceRole
+
+  InstallDockerComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: !Sub ${AWS::StackName}-install-docker
+      Platform: Linux
+      Version: 1.0.0
+      Description: Install Docker on Amazon Linux 2023
+      Data: |
+        name: InstallDocker
+        description: Install Docker on Amazon Linux 2023
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: UpdatePackages
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - dnf update -y
+              - name: InstallDocker
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - dnf install -y docker
+                    - systemctl enable docker
+          - name: validate
+            steps:
+              - name: ValidateDocker
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - docker --version
