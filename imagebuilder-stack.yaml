@@ -89,3 +89,21 @@ Resources:
                 inputs:
                   commands:
                     - docker --version
+
+  DockerImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      Name: !Sub ${AWS::StackName}-docker-al2023-recipe
+      Version: 1.0.0
+      ParentImage: !Ref ParentImage
+      Components:
+        - ComponentArn: !Ref InstallDockerComponent
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+            DeleteOnTermination: true
+      AmiTags:
+        Name: !Sub ${AWS::StackName}-docker-al2023-ami
+        Environment: !Ref Environment
