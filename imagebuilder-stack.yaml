@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+  NetworkStackName:
+    Type: String
+    Default: network-stack
+
+  ImageBuilderInstanceType:
+    Type: String
+    Default: t2.micro
+
+  ParentImage:
+    Type: String
+    Default: ami-0a371542ad09d2434 # Amazon Linux 2023 kernel-6.1 AMI 64 ビット (x86), uefi-preferred
+    Description: Base image for Image Builder
+
+Resources:
+  ImageBuilderSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EC2 Image Builder build instance
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      SecurityGroupEgress:
+        - Description: Allow all outbound traffic
+          IpProtocol: -1
+          CidrIp: 0.0.0.0/0
