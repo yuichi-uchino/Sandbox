@@ -18,7 +18,7 @@ Parameters:
     Default: t2.micro
 
   ParentImage:
-    Type: String
+    Type: AWS::EC2::Image::Id
     Default: ami-0a371542ad09d2434 # Amazon Linux 2023 kernel-6.1 AMI 64 ビット (x86), uefi-preferred
     Description: Base image for Image Builder
 
@@ -81,9 +81,9 @@ Resources:
     Properties:
       Name: !Sub ${AWS::StackName}-install-docker
       Platform: Linux
-      Version: 1.0.1
+      Version: 1.0.2
       Description: Install Docker on Amazon Linux 2023
-      ChangeDescription: "OS update component and Docker install component were separated."
+      ChangeDescription: "Add Test stages"
       Data: |
         name: InstallDocker
         description: Install Docker on Amazon Linux 2023
@@ -104,13 +104,22 @@ Resources:
                 inputs:
                   commands:
                     - docker --version
+          - name: test
+            steps:
+              - name: TestDocker
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - docker --version
+                    - systemctl is-enabled docker
+                    - systemctl is-active docker
 
   DockerImageRecipe:
     Type: AWS::ImageBuilder::ImageRecipe
     Properties:
       Name: !Sub ${AWS::StackName}-docker-al2023-recipe
-      Version: 1.0.1
-      Description: "OS update component and Docker install component were separated."
+      Version: 1.0.2
+      Description: "Add Test stages"
       ParentImage: !Ref ParentImage
       Components:
         - ComponentArn: !Ref UpdateOsComponent
@@ -141,3 +150,58 @@ Resources:
       InstanceMetadataOptions:
         HttpTokens: required
         HttpPutResponseHopLimit: 2
+
+  AppLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AWS::StackName}-app-lt
+      LaunchTemplateData:
+        ImageId: !Ref ParentImage
+        InstanceType: !Ref ImageBuilderInstanceType
+        IamInstanceProfile:
+          Arn: !GetAtt ImageBuilderInstanceProfile.Arn
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub ${NetworkStackName}-AppSecurityGroupId
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            echo "hello"
+        MetadataOptions:
+          HttpTokens: required
+
+  DockerAmiDistributionConfiguration:
+    Type: AWS::ImageBuilder::DistributionConfiguration
+    Properties:
+      Name: !Sub ${AWS::StackName}-distribution-config
+      Distributions:
+        - Region: !Ref AWS::Region
+          AmiDistributionConfiguration:
+            Name: !Sub ${AWS::StackName}-docker-al2023-{{ imagebuilder:buildDate }}
+            Description: Docker-ready Amazon Linux 2023 AMI
+            AmiTags:
+              Name: !Sub ${AWS::StackName}-docker-al2023
+              Environment: !Ref Environment
+          LaunchTemplateConfigurations:
+            - LaunchTemplateId: !Ref AppLaunchTemplate
+              SetDefaultVersion: true
+
+  DockerImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Name: !Sub ${AWS::StackName}-docker-al2023-pipeline
+      Description: "Pipeline to build Docker-ready Amazon Linux 2023 AMI"
+      ImageRecipeArn: !Ref DockerImageRecipe
+      InfrastructureConfigurationArn: !Ref ImageBuilderInfrastructureConfiguration
+      DistributionConfigurationArn: !Ref DockerAmiDistributionConfiguration
+      Status: ENABLED
+      ImageScanningConfiguration:
+        ImageScanningEnabled: true
+      ImageTestsConfiguration:
+        ImageTestsEnabled: true
+        TimeoutMinutes: 60
+      LoggingConfiguration:
+        ImageLogGroupName: !Sub /aws/imagebuilder/${AWS::StackName}/image
+        PipelineLogGroupName: !Sub /aws/imagebuilder/${AWS::StackName}/pipeline
+      Tags:
+        Environment: !Ref Environment
