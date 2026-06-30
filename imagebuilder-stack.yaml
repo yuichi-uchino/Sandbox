@@ -124,3 +124,20 @@ Resources:
       AmiTags:
         Name: !Sub ${AWS::StackName}-docker-al2023-ami
         Environment: !Ref Environment
+
+  ImageBuilderInfrastructureConfiguration:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: !Sub ${AWS::StackName}-infra-config
+      InstanceProfileName: !Ref ImageBuilderInstanceProfile
+      InstanceTypes:
+        - !Ref ImageBuilderInstanceType
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-PublicSubnetAId
+      SecurityGroupIds:
+        - !Ref ImageBuilderSecurityGroup
+      TerminateInstanceOnFailure: false
+      InstanceMetadataOptions:
+        HttpTokens: required
+        HttpPutResponseHopLimit: 2
