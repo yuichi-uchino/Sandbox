@@ -57,16 +57,16 @@ Resources:
       Roles:
         - !Ref ImageBuilderInstanceRole
 
-  InstallDockerComponent:
+  UpdateOsComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub ${AWS::StackName}-install-docker
+      Name: !Sub ${AWS::StackName}-update-os
       Platform: Linux
       Version: 1.0.0
-      Description: Install Docker on Amazon Linux 2023
+      Description: Update OS packages on Amazon Linux 2023
       Data: |
-        name: InstallDocker
-        description: Install Docker on Amazon Linux 2023
+        name: UpdateOS
+        description: Update OS packages on Amazon Linux 2023
         schemaVersion: 1.0
         phases:
           - name: build
@@ -76,6 +76,21 @@ Resources:
                 inputs:
                   commands:
                     - dnf update -y
+  InstallDockerComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: !Sub ${AWS::StackName}-install-docker
+      Platform: Linux
+      Version: 1.0.1
+      Description: Install Docker on Amazon Linux 2023
+      ChangeDescription: "OS update component and Docker install component were separated."
+      Data: |
+        name: InstallDocker
+        description: Install Docker on Amazon Linux 2023
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
               - name: InstallDocker
                 action: ExecuteBash
                 inputs:
@@ -94,9 +109,11 @@ Resources:
     Type: AWS::ImageBuilder::ImageRecipe
     Properties:
       Name: !Sub ${AWS::StackName}-docker-al2023-recipe
-      Version: 1.0.0
+      Version: 1.0.1
+      Description: "OS update component and Docker install component were separated."
       ParentImage: !Ref ParentImage
       Components:
+        - ComponentArn: !Ref UpdateOsComponent
         - ComponentArn: !Ref InstallDockerComponent
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
