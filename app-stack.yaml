@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Environment:
+    Type: String
+    Description: "Deployment environment: dev, stg, or prod"
+    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+  NetworkStackName:
+    Type: String
+    Description: "The name of the network stack to reference"
+    Default: network-stack
+
+  AlbStackName:
+    Type: String
+    Description: "The name of the ALB stack to reference"
+    Default: alb-stack
+
+#  EcrRepositoryName:
+#    Type: String
+#    Description: "The name of the ECR repository for the app image"
+
+  ImagebuilderStackName:
+    Type: String
+    Description: "The name of the Image Builder stack to reference"
+    Default: imagebuilder-stack
+
+  KmsStackName:
+    Type: String
+    Description: "The name of the KMS stack to reference"
+    Default: kms-stack
+
+Resources:
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/ec2/${AWS::StackName}
+      RetentionInDays: 7
+      KmsKeyId:
+        Fn::ImportValue:
+          !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
+
+  AppInstance:
+    Type: AWS::EC2::Instance
+    Properties: # インスタンスプロファイルはImage Builderで作成したIAMロールを使用する
+      LaunchTemplate:
+        LaunchTemplateId:
+          Fn::ImportValue:
+            !Sub ${ImagebuilderStackName}-AppLaunchTemplateId
+        Version:
+          Fn::ImportValue:
+            !Sub ${ImagebuilderStackName}-AppLaunchTemplateVersion
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-PrivateAppSubnetAId
