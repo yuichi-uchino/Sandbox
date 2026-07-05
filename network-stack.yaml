@@ -11,7 +11,7 @@ Parameters:
       - prod
     Default: dev
 
-  kmsStackName:
+  KmsStackName:
     Type: String
     Description: "The name of the KMS stack to reference"
     Default: kms-stack
@@ -103,7 +103,7 @@ Resources:
       RetentionInDays: 7
       KmsKeyId:
         Fn::ImportValue:
-          !Sub ${kmsStackName}-CloudWatchLogsKmsKeyArn
+          !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
 
   VPCFlowLogsRole:
     Type: AWS::IAM::Role
