@@ -82,3 +82,57 @@ Resources:
       RouteTableIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-PrivateAppRouteTableId
+
+  SSMEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      PrivateDnsEnabled: true
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+
+  SSMMessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+      PrivateDnsEnabled: true
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+
+  EC2MessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+      PrivateDnsEnabled: true
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VPCId
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStackName}-EndpointSecurityGroupId
