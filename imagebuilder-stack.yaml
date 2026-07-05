@@ -233,3 +233,9 @@ Outputs:
     Value: !Ref AppLaunchTemplate
     Export:
       Name: !Sub ${AWS::StackName}-AppLaunchTemplateId
+
+  AppLaunchTemplateVersion:
+    Description: "Launch Template version number to use for App EC2"
+    Value: !GetAtt AppLaunchTemplate.LatestVersionNumber
+    Export:
+      Name: !Sub ${AWS::StackName}-AppLaunchTemplateVersion
