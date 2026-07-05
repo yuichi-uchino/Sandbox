@@ -57,6 +57,27 @@ Resources:
       Roles:
         - !Ref ImageBuilderInstanceRole
 
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-app-instance-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${AWS::StackName}-app-instance-profile
+      Roles:
+        - !Ref AppInstanceRole
+
   UpdateOsComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
@@ -166,7 +187,7 @@ Resources:
         UserData:
           Fn::Base64: |
             #!/bin/bash
-            echo "hello"
+            echo "hello from user data" | tee /tmp/userdata-test.log
         MetadataOptions:
           HttpTokens: required
 
@@ -205,3 +226,10 @@ Resources:
         PipelineLogGroupName: !Sub /aws/imagebuilder/${AWS::StackName}/pipeline
       Tags:
         Environment: !Ref Environment
+
+Outputs:
+  AppLaunchTemplateId:
+    Description: "Launch Template ID updated by EC2 Image Builder"
+    Value: !Ref AppLaunchTemplate
+    Export:
+      Name: !Sub ${AWS::StackName}-AppLaunchTemplateId
