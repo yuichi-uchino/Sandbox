@@ -30,23 +30,7 @@ Parameters:
     Description: "The name of the Image Builder stack to reference"
     Default: imagebuilder-stack
 
-  KmsStackName:
-    Type: String
-    Description: "The name of the KMS stack to reference"
-    Default: kms-stack
-
 Resources:
-  AppLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/ec2/${AWS::StackName}
-      RetentionInDays: 7
-      KmsKeyId:
-        Fn::ImportValue:
-          !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
-
   AppInstance:
     Type: AWS::EC2::Instance
     Properties: # インスタンスプロファイルはImage Builderで作成したIAMロールを使用する

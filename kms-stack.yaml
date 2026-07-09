@@ -50,9 +50,8 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:logs:arn:
-                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vpcflowlogs/network-stack
-                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/ec2/app-stack
-                  # todo この書き方すると動的なスタック名にできないのであとで修正する
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vpcflowlogs/*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/ec2/*
 
   CloudWatchLogsKmsAlias:
     Type: AWS::KMS::Alias
