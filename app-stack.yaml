@@ -25,22 +25,56 @@ Parameters:
 #    Type: String
 #    Description: "The name of the ECR repository for the app image"
 
-  ImagebuilderStackName:
+  AppInstanceType:
     Type: String
-    Description: "The name of the Image Builder stack to reference"
-    Default: imagebuilder-stack
+    Default: t2.micro
 
 Resources:
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-app-instance-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${AWS::StackName}-app-instance-profile
+      Roles:
+        - !Ref AppInstanceRole
+
+  AppLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AWS::StackName}-app-lt
+      LaunchTemplateData:
+        ImageId: ami-052a04fa021790f0e
+        InstanceType: !Ref AppInstanceType
+        IamInstanceProfile:
+          Arn: !GetAtt AppInstanceProfile.Arn
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub ${NetworkStackName}-AppSecurityGroupId
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            echo "hello from app user data" | tee /tmp/userdata-test.log
+        MetadataOptions:
+          HttpTokens: required
   AppInstance:
     Type: AWS::EC2::Instance
     Properties: # インスタンスプロファイルはImage Builderで作成したIAMロールを使用する
       LaunchTemplate:
-        LaunchTemplateId:
-          Fn::ImportValue:
-            !Sub ${ImagebuilderStackName}-AppLaunchTemplateId
-        Version:
-          Fn::ImportValue:
-            !Sub ${ImagebuilderStackName}-AppLaunchTemplateVersion
+        LaunchTemplateId: !Ref AppLaunchTemplate
+        Version: !GetAtt AppLaunchTemplate.LatestVersionNumber
       SubnetId:
         Fn::ImportValue:
           !Sub ${NetworkStackName}-PrivateAppSubnetAId
