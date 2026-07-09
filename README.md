@@ -8,6 +8,7 @@ ALB + ASG + EC2 + Docker + ECR Pull + NATなしVPC Endpoint構成でリソース
 ## 課金対象のリソースを管理しているスタック
 - alb-stack
 - endpoint-stack
+- app-stack
 
 ## よく使うコマンド
 
