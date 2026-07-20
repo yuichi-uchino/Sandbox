@@ -3,8 +3,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   Environment:
     Type: String
-    Description: "Deployment environment: dev, stg, or prod"
-    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、環境ごとの命名や設定切り替えに利用します。
     AllowedValues:
       - dev
       - stg
@@ -13,12 +14,20 @@ Parameters:
 
   NetworkStackName:
     Type: String
-    Description: "The name of the network stack to reference"
+    Description: >
+      VPC、プライベートサブネット、ルートテーブル、エンドポイント用
+      セキュリティグループなどのネットワークリソースを Export している
+      CloudFormation スタック名を指定します。
     Default: network-stack
 
 Resources:
   EcrApiEndpoint:
     Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        プライベートサブネットから Amazon ECR API へ VPC 内経由でアクセスするための
+        Interface VPC Endpoint を作成します。イメージ情報の取得や認証トークン取得など、
+        ECR API 操作をインターネットへ出さずに実行できるようにします。
     Properties:
       VpcId:
         Fn::ImportValue:
@@ -37,6 +46,11 @@ Resources:
 
   EcrDkrEndpoint:
     Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        プライベートサブネットから Amazon ECR Docker Registry へ VPC 内経由で
+        アクセスするための Interface VPC Endpoint を作成します。
+        コンテナイメージの pull や push をインターネット経由にせず実行できます。
     Properties:
       VpcId:
         Fn::ImportValue:
@@ -55,6 +69,11 @@ Resources:
 
   LogsEndpoint:
     Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        プライベートサブネット内のリソースから Amazon CloudWatch Logs へ
+        VPC 内経由でログを送信するための Interface VPC Endpoint を作成します。
+        NAT Gateway やインターネット経路に依存せずログ出力できるようにします。
     Properties:
       VpcId:
         Fn::ImportValue:
@@ -73,6 +92,11 @@ Resources:
 
   S3GatewayEndpoint:
     Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        プライベートアプリケーション用ルートテーブルに Amazon S3 への
+        Gateway VPC Endpoint を関連付けます。S3 への通信を AWS ネットワーク内で
+        完結させ、NAT Gateway やインターネット経路を使わずにアクセスできるようにします。
     Properties:
       VpcId:
         Fn::ImportValue:
@@ -85,6 +109,11 @@ Resources:
 
   SSMEndpoint:
     Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        プライベートサブネット内の EC2 インスタンスが AWS Systems Manager の
+        SSM API へ VPC 内経由でアクセスするための Interface VPC Endpoint を作成します。
+        インスタンス管理やセッション開始に必要な SSM 操作を可能にします。
     Properties:
       VpcEndpointType: Interface
       ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
@@ -103,6 +132,11 @@ Resources:
 
   SSMMessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        Systems Manager Session Manager のメッセージ通信に必要な
+        ssmmessages 用 Interface VPC Endpoint を作成します。プライベートサブネット内の
+        EC2 インスタンスと SSM サービス間のセッション通信を VPC 内経由で行えるようにします。
     Properties:
       VpcEndpointType: Interface
       ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
@@ -121,6 +155,11 @@ Resources:
 
   EC2MessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        Systems Manager が EC2 インスタンスと制御メッセージをやり取りするために必要な
+        ec2messages 用 Interface VPC Endpoint を作成します。プライベートサブネット内の
+        インスタンスをインターネット経由にせず Systems Manager で管理できるようにします。
     Properties:
       VpcEndpointType: Interface
       ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
