@@ -3,8 +3,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   Environment:
     Type: String
-    Description: "Deployment environment: dev, stg, or prod"
-    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、環境ごとの CIDR 範囲やリソース識別に利用します。
     AllowedValues:
       - dev
       - stg
@@ -13,7 +14,9 @@ Parameters:
 
   KmsStackName:
     Type: String
-    Description: "The name of the KMS stack to reference"
+    Description: >
+      VPC Flow Logs のロググループ暗号化に利用する KMS キー ARN を Export している
+      CloudFormation スタック名を指定します。
     Default: kms-stack
 
 Mappings:
@@ -46,6 +49,11 @@ Mappings:
 Resources:
   VPC:
     Type: AWS::EC2::VPC
+    Metadata:
+      Description: >
+        環境ごとに定義された CIDR ブロックを使用して VPC を作成します。
+        DNS ホスト名と DNS 解決を有効化し、アプリケーション、データベース、
+        VPC エンドポイントを配置するネットワークの土台になります。
     Properties:
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,VpcCidr]
       EnableDnsHostnames: true
@@ -54,6 +62,10 @@ Resources:
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
+    Metadata:
+      Description: >
+        1 つ目の Availability Zone にパブリックサブネットを作成します。
+        ALB やインターネット向けリソースを配置するためのサブネットとして利用します。
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PublicSubnetACidr]
@@ -64,6 +76,10 @@ Resources:
 
   PublicSubnetC:
     Type: AWS::EC2::Subnet
+    Metadata:
+      Description: >
+        2 つ目の Availability Zone にパブリックサブネットを作成します。
+        ALB を複数 AZ に配置し、可用性を確保するために利用します。
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PublicSubnetCCidr ]
@@ -74,6 +90,11 @@ Resources:
 
   PrivateAppSubnetA:
     Type: AWS::EC2::Subnet
+    Metadata:
+      Description: >
+        1 つ目の Availability Zone にアプリケーション用プライベートサブネットを
+        作成します。EC2 などのアプリケーション実行基盤をインターネットから
+        直接到達できない場所に配置するために利用します。
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateAppSubnetACidr]
@@ -84,6 +105,10 @@ Resources:
 
   PrivateAppSubnetC:
     Type: AWS::EC2::Subnet
+    Metadata:
+      Description: >
+        2 つ目の Availability Zone にアプリケーション用プライベートサブネットを
+        作成します。アプリケーション層を複数 AZ に分散できるようにします。
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateAppSubnetCCidr ]
@@ -94,6 +119,10 @@ Resources:
 
   PrivateDBSubnetA:
     Type: AWS::EC2::Subnet
+    Metadata:
+      Description: >
+        1 つ目の Availability Zone にデータベース用プライベートサブネットを作成します。
+        データベースをアプリケーション層とは分離した非公開ネットワークへ配置するために利用します。
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [EnvironmentMap, !Ref Environment,PrivateDBSubnetACidr]
@@ -104,6 +133,10 @@ Resources:
 
   PrivateDBSubnetC:
     Type: AWS::EC2::Subnet
+    Metadata:
+      Description: >
+        2 つ目の Availability Zone にデータベース用プライベートサブネットを作成します。
+        データベース層の冗長構成や将来の Multi-AZ 構成に利用できるようにします。
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !FindInMap [ EnvironmentMap, !Ref Environment,PrivateDBSubnetCCidr ]
@@ -116,6 +149,11 @@ Resources:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
+    Metadata:
+      Description: >
+        VPC Flow Logs の出力先となる CloudWatch Logs ロググループを作成します。
+        ログは 7 日間保持し、KMS スタックからインポートした KMS キーで暗号化します。
+        スタック削除や置換時にもログを保持します。
     Properties:
       LogGroupName: !Sub /aws/vpcflowlogs/${AWS::StackName}
       RetentionInDays: 7
@@ -125,6 +163,10 @@ Resources:
 
   VPCFlowLogsRole:
     Type: AWS::IAM::Role
+    Metadata:
+      Description: >
+        VPC Flow Logs サービスが CloudWatch Logs へログを配信するために引き受ける
+        IAM ロールを作成します。信頼ポリシーで vpc-flow-logs.amazonaws.com を許可します。
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -136,6 +178,10 @@ Resources:
 
   VPCFlowLogsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
+    Metadata:
+      Description: >
+        VPC Flow Logs ロールに付与する IAM 管理ポリシーを作成します。
+        対象ロググループへのログストリーム作成とログイベント書き込みを許可します。
     Properties:
       ManagedPolicyName: !Sub ${AWS::StackName}-vpc-flow-logs-policy
       PolicyDocument:
@@ -151,6 +197,11 @@ Resources:
 
   VPCFlowLog:
     Type: AWS::EC2::FlowLog
+    Metadata:
+      Description: >
+        VPC 全体の通信を対象に VPC Flow Logs を有効化します。
+        許可・拒否を含むすべてのトラフィックを CloudWatch Logs へ配信し、
+        ネットワーク監査やトラブルシュートに利用します。
     Properties:
       ResourceId: !Ref VPC
       ResourceType: VPC
@@ -161,6 +212,10 @@ Resources:
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
+    Metadata:
+      Description: >
+        VPC をインターネットへ接続するための Internet Gateway を作成します。
+        パブリックサブネットのデフォルトルートの宛先として利用します。
     Properties:
       Tags:
         - Key: Name
@@ -168,12 +223,20 @@ Resources:
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
+    Metadata:
+      Description: >
+        作成した Internet Gateway を VPC にアタッチします。
+        パブリックサブネットからインターネットへ到達するために必要な関連付けです。
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
+    Metadata:
+      Description: >
+        パブリックサブネット用のルートテーブルを作成します。
+        Internet Gateway へのデフォルトルートを持たせ、ALB などの公開リソースに利用します。
     Properties:
       VpcId: !Ref VPC
       Tags:
@@ -183,6 +246,10 @@ Resources:
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: InternetGatewayAttachment
+    Metadata:
+      Description: >
+        パブリックルートテーブルに 0.0.0.0/0 宛てのデフォルトルートを追加します。
+        Internet Gateway へ転送することで、パブリックサブネットからのインターネット通信を可能にします。
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -190,18 +257,30 @@ Resources:
 
   PublicSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Metadata:
+      Description: >
+        PublicSubnetA をパブリックルートテーブルへ関連付けます。
+        このサブネットに配置されたリソースが Internet Gateway 経由の経路を利用できるようにします。
     Properties:
       SubnetId: !Ref PublicSubnetA
       RouteTableId: !Ref PublicRouteTable
 
   PublicSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Metadata:
+      Description: >
+        PublicSubnetC をパブリックルートテーブルへ関連付けます。
+        複数 AZ のパブリックサブネットで同じインターネット向け経路を利用できるようにします。
     Properties:
       SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
 
   PrivateAppRouteTable:
     Type: AWS::EC2::RouteTable
+    Metadata:
+      Description: >
+        アプリケーション用プライベートサブネットのルートテーブルを作成します。
+        アプリケーション層の通信経路をパブリックサブネットやデータベース層と分離して管理します。
     Properties:
       VpcId: !Ref VPC
       Tags:
@@ -210,6 +289,10 @@ Resources:
 
   PrivateDBRouteTable:
     Type: AWS::EC2::RouteTable
+    Metadata:
+      Description: >
+        データベース用プライベートサブネットのルートテーブルを作成します。
+        データベース層の通信経路をアプリケーション層とは分離して管理します。
     Properties:
       VpcId: !Ref VPC
       Tags:
@@ -218,30 +301,51 @@ Resources:
 
   PrivateAppSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Metadata:
+      Description: >
+        PrivateAppSubnetA をアプリケーション用プライベートルートテーブルへ関連付けます。
+        アプリケーション層の 1 つ目の AZ で専用のプライベート経路を利用できるようにします。
     Properties:
       SubnetId: !Ref PrivateAppSubnetA
       RouteTableId: !Ref PrivateAppRouteTable
 
   PrivateAppSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Metadata:
+      Description: >
+        PrivateAppSubnetC をアプリケーション用プライベートルートテーブルへ関連付けます。
+        アプリケーション層の 2 つ目の AZ でも同じプライベート経路を利用できるようにします。
     Properties:
       SubnetId: !Ref PrivateAppSubnetC
       RouteTableId: !Ref PrivateAppRouteTable
 
   PrivateDBSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Metadata:
+      Description: >
+        PrivateDBSubnetA をデータベース用プライベートルートテーブルへ関連付けます。
+        データベース層の 1 つ目の AZ で専用のプライベート経路を利用できるようにします。
     Properties:
       SubnetId: !Ref PrivateDBSubnetA
       RouteTableId: !Ref PrivateDBRouteTable
 
   PrivateDBSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Metadata:
+      Description: >
+        PrivateDBSubnetC をデータベース用プライベートルートテーブルへ関連付けます。
+        データベース層の 2 つ目の AZ でも同じプライベート経路を利用できるようにします。
     Properties:
       SubnetId: !Ref PrivateDBSubnetC
       RouteTableId: !Ref PrivateDBRouteTable
 
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      Description: >
+        Application Load Balancer に関連付けるセキュリティグループを作成します。
+        初期状態では明示的な外向き通信を持たせず、別リソースのルールで HTTP/HTTPS 受信と
+        アプリケーションへの転送を定義します。
     Properties:
       GroupDescription: Security group for ALB
       VpcId: !Ref VPC
@@ -249,6 +353,11 @@ Resources:
 
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      Description: >
+        アプリケーションサーバーに関連付けるセキュリティグループを作成します。
+        ALB からのアプリケーションポート受信、DB への送信、VPC エンドポイントへの
+        HTTPS 送信を個別ルールとして定義します。
     Properties:
       GroupDescription: Security group for application servers
       VpcId: !Ref VPC
@@ -256,6 +365,11 @@ Resources:
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      Description: >
+        データベースサーバーに関連付けるセキュリティグループを作成します。
+        初期状態では明示的な外向き通信を持たせず、アプリケーションからの
+        PostgreSQL 接続だけを別ルールで許可します。
     Properties:
       GroupDescription: Security group for database servers
       VpcId: !Ref VPC
@@ -263,6 +377,10 @@ Resources:
 
   EndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      Description: >
+        Interface VPC Endpoint に関連付けるセキュリティグループを作成します。
+        アプリケーションサーバーからの HTTPS 接続を受け付けるために利用します。
     Properties:
       GroupDescription: Security group for interface VPC endpoints
       VpcId: !Ref VPC
@@ -270,6 +388,10 @@ Resources:
 
   ALBIngressHttpRule:
     Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      Description: >
+        ALB セキュリティグループに対して、インターネットからの HTTP 80 番ポート受信を許可します。
+        平文 HTTP での入口を提供するためのインバウンドルールです。
     Properties:
       GroupId: !Ref ALBSecurityGroup
       IpProtocol: tcp
@@ -279,6 +401,10 @@ Resources:
 
   ALBIngressHttpsRule:
     Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      Description: >
+        ALB セキュリティグループに対して、インターネットからの HTTPS 443 番ポート受信を許可します。
+        TLS 終端を行う構成に備えたインバウンドルールです。
     Properties:
       GroupId: !Ref ALBSecurityGroup
       IpProtocol: tcp
@@ -288,6 +414,10 @@ Resources:
 
   ALBEgressToAppRule:
     Type: AWS::EC2::SecurityGroupEgress
+    Metadata:
+      Description: >
+        ALB からアプリケーションサーバーへ 8080 番ポートで通信することを許可します。
+        ALB が受け付けたリクエストをアプリケーション層へ転送するためのアウトバウンドルールです。
     Properties:
       GroupId: !Ref ALBSecurityGroup
       IpProtocol: tcp
@@ -297,6 +427,10 @@ Resources:
 
   AppIngressFromALBRule:
     Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      Description: >
+        アプリケーションサーバーが ALB からの 8080 番ポート通信を受け付けることを許可します。
+        送信元を ALB セキュリティグループに限定し、アプリケーション入口を制御します。
     Properties:
       GroupId: !Ref AppSecurityGroup
       IpProtocol: tcp
@@ -306,6 +440,10 @@ Resources:
 
   AppEgressToDBRule:
     Type: AWS::EC2::SecurityGroupEgress
+    Metadata:
+      Description: >
+        アプリケーションサーバーからデータベースサーバーへ PostgreSQL の 5432 番ポートで
+        通信することを許可します。送信先を DB セキュリティグループに限定します。
     Properties:
       GroupId: !Ref AppSecurityGroup
       IpProtocol: tcp
@@ -315,6 +453,11 @@ Resources:
 
   AppEgressToEndpointHttpsRule:
     Type: AWS::EC2::SecurityGroupEgress
+    Metadata:
+      Description: >
+        アプリケーションサーバーから Interface VPC Endpoint へ HTTPS 443 番ポートで
+        通信することを許可します。ECR、CloudWatch Logs、SSM などの AWS サービスへ
+        プライベート経路でアクセスするために利用します。
     Properties:
       GroupId: !Ref AppSecurityGroup
       IpProtocol: tcp
@@ -324,6 +467,10 @@ Resources:
 
   DBIngressFromAppRule:
     Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      Description: >
+        データベースサーバーがアプリケーションサーバーからの PostgreSQL 5432 番ポート通信を
+        受け付けることを許可します。送信元をアプリケーションセキュリティグループに限定します。
     Properties:
       GroupId: !Ref DBSecurityGroup
       IpProtocol: tcp
@@ -333,6 +480,10 @@ Resources:
 
   EndpointIngressFromAppHttpsRule:
     Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      Description: >
+        Interface VPC Endpoint がアプリケーションサーバーからの HTTPS 443 番ポート通信を
+        受け付けることを許可します。送信元をアプリケーションセキュリティグループに限定します。
     Properties:
       GroupId: !Ref EndpointSecurityGroup
       IpProtocol: tcp
