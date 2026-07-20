@@ -3,8 +3,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   Environment:
     Type: String
-    Description: "Deployment environment: dev, stg, or prod"
-    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、環境ごとの命名や設定切り替えに利用します。
     AllowedValues:
       - dev
       - stg
@@ -13,12 +14,16 @@ Parameters:
 
   NetworkStackName:
     Type: String
-    Description: "The name of the network stack to reference"
+    Description: >
+      VPC、アプリケーション用サブネット、EC2 用セキュリティグループなどの
+      ネットワークリソースを Export している CloudFormation スタック名を指定します。
     Default: network-stack
 
   AlbStackName:
     Type: String
-    Description: "The name of the ALB stack to reference"
+    Description: >
+      Application Load Balancer やターゲットグループなどの ALB 関連リソースを
+      Export している CloudFormation スタック名を指定します。
     Default: alb-stack
 
 #  EcrRepositoryName:
@@ -27,11 +32,19 @@ Parameters:
 
   AppInstanceType:
     Type: String
+    Description: >
+      アプリケーションを実行する EC2 インスタンスのインスタンスタイプを指定します。
+      環境や負荷に応じて CPU、メモリ、コストのバランスを調整するために利用します。
     Default: t2.micro
 
 Resources:
   AppInstanceRole:
     Type: AWS::IAM::Role
+    Metadata:
+      Description: >
+        アプリケーション用 EC2 インスタンスに付与する IAM ロールを作成します。
+        EC2 がこのロールを引き受け、Systems Manager 経由で管理できるように
+        AmazonSSMManagedInstanceCore 管理ポリシーを関連付けます。
     Properties:
       RoleName: !Sub ${AWS::StackName}-app-instance-role
       AssumeRolePolicyDocument:
@@ -46,6 +59,11 @@ Resources:
 
   AppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
+    Metadata:
+      Description: >
+        アプリケーション用 EC2 インスタンスへ IAM ロールを渡すための
+        インスタンスプロファイルを作成します。起動テンプレートから参照され、
+        インスタンス起動時に AppInstanceRole を関連付けます。
     Properties:
       InstanceProfileName: !Sub ${AWS::StackName}-app-instance-profile
       Roles:
@@ -53,6 +71,11 @@ Resources:
 
   AppLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
+    Metadata:
+      Description: >
+        アプリケーション用 EC2 インスタンスの起動設定をまとめた Launch Template を
+        作成します。AMI、インスタンスタイプ、IAM インスタンスプロファイル、
+        セキュリティグループ、ユーザーデータ、IMDSv2 必須設定を定義します。
     Properties:
       LaunchTemplateName: !Sub ${AWS::StackName}-app-lt
       LaunchTemplateData:
@@ -71,6 +94,11 @@ Resources:
           HttpTokens: required
   AppInstance:
     Type: AWS::EC2::Instance
+    Metadata:
+      Description: >
+        アプリケーションを実行する EC2 インスタンスを作成します。
+        起動テンプレートの最新バージョンを使用し、ネットワークスタックから
+        インポートしたプライベートアプリケーション用サブネットへ配置します。
     Properties: # インスタンスプロファイルはImage Builderで作成したIAMロールを使用する
       LaunchTemplate:
         LaunchTemplateId: !Ref AppLaunchTemplate
