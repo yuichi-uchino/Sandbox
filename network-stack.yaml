@@ -59,6 +59,9 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true # デフォルト値を明示的に宣言
       InstanceTenancy: default # デフォルト値を明示的に宣言
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-vpc
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
@@ -350,6 +353,9 @@ Resources:
       GroupDescription: Security group for ALB
       VpcId: !Ref VPC
       SecurityGroupEgress: []
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-alb-sg
 
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -362,6 +368,9 @@ Resources:
       GroupDescription: Security group for application servers
       VpcId: !Ref VPC
       SecurityGroupEgress: []
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-app-sg
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -374,6 +383,9 @@ Resources:
       GroupDescription: Security group for database servers
       VpcId: !Ref VPC
       SecurityGroupEgress: []
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-db-sg
 
   EndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -385,6 +397,9 @@ Resources:
       GroupDescription: Security group for interface VPC endpoints
       VpcId: !Ref VPC
       SecurityGroupEgress: [ ]
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-endpoint-sg
 
   ALBIngressHttpRule:
     Type: AWS::EC2::SecurityGroupIngress
