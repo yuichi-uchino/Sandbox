@@ -73,6 +73,51 @@ Resources:
       AliasName: !Sub alias/${AWS::StackName}/cloudwatch-logs
       TargetKeyId: !Ref CloudWatchLogsKmsKey
 
+  StepFunctionsKmsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      Description: >
+        SFnのステートマシンのリソースを暗号化に使用する KMS キーを作成します。
+        キーローテーションを有効化し、スタック削除や置換時にもキーを保持することで、
+        既存ログの復号に必要なキーを誤って削除しないようにします。
+    Properties:
+      Description: KMS key for Step Functions state machine
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnableAccountRootPermissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+          - Sid: AllowStepFunctionsUseKey
+            Effect: Allow
+            Principal:
+              Service: !Sub states.${AWS::Region}.${AWS::URLSuffix}
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:EncryptionContext:aws:states:stateMachineArn:
+                  - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:cost-control-delete-stack
+
+  StepFunctionsKmsAlias:
+    Type: AWS::KMS::Alias
+    Metadata:
+      Description: >
+        Step Functions 用 KMS キーを参照しやすくするためのエイリアスを作成します。
+        スタック名を含む alias パスを付けることで、環境や用途ごとのキーを識別しやすくします。
+    Properties:
+      AliasName: !Sub alias/${AWS::StackName}/step-functions
+      TargetKeyId: !Ref StepFunctionsKmsKey
+
 Outputs:
   CloudWatchLogsKmsKeyArn:
     Description: >
@@ -81,3 +126,10 @@ Outputs:
     Value: !GetAtt CloudWatchLogsKmsKey.Arn
     Export:
       Name: !Sub ${AWS::StackName}-CloudWatchLogsKmsKeyArn
+  StepFunctionsKmsKeyArn:
+    Description: >
+      Step Functions の暗号化に利用する KMS キー ARN を出力します。
+      他スタックから参照できるように Export 名も付与します。
+    Value: !GetAtt StepFunctionsKmsKey.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-StepFunctionsKmsKeyArn
