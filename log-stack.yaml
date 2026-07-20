@@ -3,8 +3,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   Environment:
     Type: String
-    Description: "Deployment environment: dev, stg, or prod"
-    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、ログリソースの識別や環境別の設定に利用します。
     AllowedValues:
       - dev
       - stg
@@ -13,7 +14,9 @@ Parameters:
 
   KmsStackName:
     Type: String
-    Description: "The name of the KMS stack to reference"
+    Description: >
+      CloudWatch Logs 暗号化用の KMS キー ARN を Export している
+      CloudFormation スタック名を指定します。ロググループの KMS 暗号化設定で参照します。
     Default: kms-stack
 
 Resources:
@@ -21,6 +24,11 @@ Resources:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
+    Metadata:
+      Description: >
+        アプリケーション用 EC2 インスタンスのログを保存する CloudWatch Logs
+        ロググループを作成します。ログは 7 日間保持し、KMS スタックから
+        インポートした KMS キーで暗号化します。スタック削除や置換時にもログを保持します。
     Properties:
       LogGroupName: !Sub /aws/ec2/${AWS::StackName}
       RetentionInDays: 7
