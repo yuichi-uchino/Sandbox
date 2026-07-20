@@ -51,3 +51,12 @@ Resources:
       KmsKeyId:
         Fn::ImportValue:
           !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
+
+Outputs:
+  StatesLogGroupArn:
+    Description: >
+      Step Functions 用 CloudWatch Logs ロググループの ARN を出力します。
+      ステートマシンのログ設定で参照します。
+    Value: !GetAtt StatesLogGroup.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-StatesLogGroupArn
