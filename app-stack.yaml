@@ -106,3 +106,6 @@ Resources:
       SubnetId:
         Fn::ImportValue:
           !Sub ${NetworkStackName}-PrivateAppSubnetAId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-app-instance
