@@ -3,8 +3,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   Environment:
     Type: String
-    Description: "Deployment environment: dev, stg, or prod"
-    # デプロイ先の環境（例：開発環境、ステージング環境、本番環境）
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、リソース名や環境別の設定切り替えに利用します。
     AllowedValues:
       - dev
       - stg
@@ -13,20 +14,33 @@ Parameters:
 
   NetworkStackName:
     Type: String
-    Description: "The name of the network stack to reference"
+    Description: >
+      VPC、パブリックサブネット、ALB 用セキュリティグループなどのネットワーク
+      リソースを Export している CloudFormation スタック名を指定します。
     Default: network-stack
 
   AppPort:
     Type: Number
+    Description: >
+      アプリケーションが HTTP リクエストを受け付けるポート番号を指定します。
+      ALB のターゲットグループがバックエンドインスタンスへ転送する宛先ポートです。
     Default: 8080
 
   HealthCheckPath:
     Type: String
+    Description: >
+      ALB ターゲットグループがアプリケーションの正常性を確認するためにアクセスする
+      HTTP パスを指定します。正常時に 200 を返すエンドポイントを設定します。
     Default: /actuator/health
 
 Resources:
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Metadata:
+      Description: >
+        インターネット向けの Application Load Balancer を作成します。
+        ネットワークスタックからインポートしたパブリックサブネットと
+        セキュリティグループを使用し、HTTP リクエストを受け付ける入口になります。
     Properties:
       Name: !Sub ${AWS::StackName}-alb
       Type: application
@@ -46,6 +60,11 @@ Resources:
 
   AppTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Metadata:
+      Description: >
+        ALB から転送された HTTP リクエストを受けるアプリケーション用ターゲット
+        グループを作成します。指定されたアプリケーションポートとヘルスチェックパスを
+        使って、登録されたインスタンスの稼働状態を判定します。
     Properties:
       Name: !Sub ${AWS::StackName}-tg
       TargetType: instance
@@ -64,6 +83,11 @@ Resources:
 
   HttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Metadata:
+      Description: >
+        Application Load Balancer の 80 番ポートで HTTP 通信を待ち受ける
+        リスナーを作成します。受信したリクエストはデフォルトアクションとして
+        アプリケーション用ターゲットグループへ転送します。
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 80
