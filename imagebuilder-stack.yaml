@@ -49,6 +49,11 @@ Resources:
         - Description: Allow all outbound traffic
           IpProtocol: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-imagebuilder-sg
+        - Key: Environment
+          Value: !Ref Environment
 
   ImageBuilderInstanceRole:
     Type: AWS::IAM::Role
