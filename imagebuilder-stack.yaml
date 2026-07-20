@@ -3,6 +3,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   Environment:
     Type: String
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、作成する AMI や関連リソースのタグ付けに利用します。
     AllowedValues:
       - dev
       - stg
@@ -11,20 +14,32 @@ Parameters:
 
   NetworkStackName:
     Type: String
+    Description: >
+      Image Builder のビルド用インスタンスを配置する VPC、サブネットなどの
+      ネットワークリソースを Export している CloudFormation スタック名を指定します。
     Default: network-stack
 
   ImageBuilderInstanceType:
     Type: String
+    Description: >
+      EC2 Image Builder が AMI 作成時に起動するビルド用 EC2 インスタンスの
+      インスタンスタイプを指定します。ビルド処理に必要な性能とコストに応じて調整します。
     Default: t2.micro
 
   ParentImage:
     Type: AWS::EC2::Image::Id
     Default: ami-0a371542ad09d2434 # Amazon Linux 2023 kernel-6.1 AMI 64 ビット (x86), uefi-preferred
-    Description: Base image for Image Builder
+    Description: >
+      EC2 Image Builder がカスタム AMI を作成する際のベース AMI ID を指定します。
+      既定値は Amazon Linux 2023 の AMI で、OS 更新や Docker インストールの元になります。
 
 Resources:
   ImageBuilderSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      Description: >
+        EC2 Image Builder のビルド用インスタンスに関連付けるセキュリティグループを
+        作成します。VPC 内に配置し、AMI 作成に必要な外向き通信を許可します。
     Properties:
       GroupDescription: Security group for EC2 Image Builder build instance
       VpcId:
@@ -37,6 +52,11 @@ Resources:
 
   ImageBuilderInstanceRole:
     Type: AWS::IAM::Role
+    Metadata:
+      Description: >
+        EC2 Image Builder のビルド用インスタンスに付与する IAM ロールを作成します。
+        Image Builder のビルド処理に必要な権限と、Systems Manager 経由で管理するための
+        権限を管理ポリシーとして関連付けます。
     Properties:
       RoleName: !Sub ${AWS::StackName}-imagebuilder-instance-role
       AssumeRolePolicyDocument:
@@ -52,6 +72,11 @@ Resources:
 
   ImageBuilderInstanceProfile:
     Type: AWS::IAM::InstanceProfile
+    Metadata:
+      Description: >
+        EC2 Image Builder のビルド用インスタンスへ IAM ロールを渡すための
+        インスタンスプロファイルを作成します。インフラストラクチャ設定から参照され、
+        ビルドインスタンス起動時に ImageBuilderInstanceRole を関連付けます。
     Properties:
       InstanceProfileName: !Sub ${AWS::StackName}-imagebuilder-instance-profile
       Roles:
@@ -59,6 +84,11 @@ Resources:
 
   UpdateOsComponent:
     Type: AWS::ImageBuilder::Component
+    Metadata:
+      Description: >
+        Amazon Linux 2023 の OS パッケージを更新する Image Builder コンポーネントを
+        作成します。AMI 作成の build フェーズで dnf update を実行し、
+        ベースイメージのパッケージを最新化します。
     Properties:
       Name: !Sub ${AWS::StackName}-update-os
       Platform: Linux
@@ -78,6 +108,11 @@ Resources:
                     - dnf update -y
   InstallDockerComponent:
     Type: AWS::ImageBuilder::Component
+    Metadata:
+      Description: >
+        Amazon Linux 2023 に Docker をインストールし、自動起動を有効化する
+        Image Builder コンポーネントを作成します。validate と test フェーズで
+        Docker のバージョン確認とサービス状態確認を行います。
     Properties:
       Name: !Sub ${AWS::StackName}-install-docker
       Platform: Linux
@@ -116,6 +151,11 @@ Resources:
 
   DockerImageRecipe:
     Type: AWS::ImageBuilder::ImageRecipe
+    Metadata:
+      Description: >
+        Docker 利用準備済み Amazon Linux 2023 AMI を作成するための
+        Image Builder イメージレシピを定義します。親 AMI、OS 更新コンポーネント、
+        Docker インストールコンポーネント、ルートボリューム設定、AMI タグをまとめます。
     Properties:
       Name: !Sub ${AWS::StackName}-docker-al2023-recipe
       Version: 1.0.2
@@ -136,6 +176,11 @@ Resources:
 
   ImageBuilderInfrastructureConfiguration:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Metadata:
+      Description: >
+        EC2 Image Builder が AMI ビルド時に使用するインフラストラクチャ設定を作成します。
+        インスタンスプロファイル、インスタンスタイプ、配置先サブネット、
+        セキュリティグループ、失敗時のインスタンス保持、IMDSv2 必須設定を定義します。
     Properties:
       Name: !Sub ${AWS::StackName}-infra-config
       InstanceProfileName: !Ref ImageBuilderInstanceProfile
@@ -153,6 +198,11 @@ Resources:
 
   DockerAmiDistributionConfiguration:
     Type: AWS::ImageBuilder::DistributionConfiguration
+    Metadata:
+      Description: >
+        ビルドされた Docker 利用準備済み AMI の配布設定を作成します。
+        現在のリージョンへ AMI を作成し、ビルド日を含む AMI 名、
+        説明文、環境タグを付与します。
     Properties:
       Name: !Sub ${AWS::StackName}-distribution-config
       Distributions:
@@ -166,6 +216,12 @@ Resources:
 
   DockerImagePipeline:
     Type: AWS::ImageBuilder::ImagePipeline
+    Metadata:
+      Description: >
+        Docker 利用準備済み Amazon Linux 2023 AMI を継続的に作成する
+        EC2 Image Builder パイプラインを作成します。イメージレシピ、
+        インフラストラクチャ設定、配布設定を関連付け、イメージスキャン、
+        テスト、ログ出力を有効化します。
     Properties:
       Name: !Sub ${AWS::StackName}-docker-al2023-pipeline
       Description: "Pipeline to build Docker-ready Amazon Linux 2023 AMI"
