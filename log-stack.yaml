@@ -35,3 +35,19 @@ Resources:
       KmsKeyId:
         Fn::ImportValue:
           !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
+
+  StatesLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      Description: >
+        StepFunctions用のログを保存する CloudWatch Logs
+        ロググループを作成します。ログは 7 日間保持し、KMS スタックから
+        インポートした KMS キーで暗号化します。スタック削除や置換時にもログを保持します。
+    Properties:
+      LogGroupName: !Sub /aws/states/${AWS::StackName}
+      RetentionInDays: 7
+      KmsKeyId:
+        Fn::ImportValue:
+          !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
