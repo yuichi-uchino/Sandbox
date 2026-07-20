@@ -6,11 +6,16 @@ AWSTemplateFormatVersion: 2010-09-09
 # また、本来は各リソースに対してkmsキーを個別に作成することが推奨されるが、
 # 過剰コストのため、おおまかなリソース単位で作成する予定。
 ###
-Description: KMS keys for shared security resources
+Description: >
+  共有セキュリティリソースで利用する KMS キーを管理するテンプレートです。
+  KMS キーはスタック削除後も削除待機期間が発生するため、専用スタックで管理します。
 
 Parameters:
   Environment:
     Type: String
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、KMS キーの説明や関連リソースの識別に利用します。
     AllowedValues:
       - dev
       - stg
@@ -22,6 +27,11 @@ Resources:
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
+    Metadata:
+      Description: >
+        CloudWatch Logs のロググループ暗号化に使用する KMS キーを作成します。
+        キーローテーションを有効化し、スタック削除や置換時にもキーを保持することで、
+        既存ログの復号に必要なキーを誤って削除しないようにします。
     Properties:
       Description: !Sub KMS key for CloudWatch Logs - ${Environment}
       EnableKeyRotation: true
@@ -55,13 +65,19 @@ Resources:
 
   CloudWatchLogsKmsAlias:
     Type: AWS::KMS::Alias
+    Metadata:
+      Description: >
+        CloudWatch Logs 用 KMS キーを参照しやすくするためのエイリアスを作成します。
+        スタック名を含む alias パスを付けることで、環境や用途ごとのキーを識別しやすくします。
     Properties:
       AliasName: !Sub alias/${AWS::StackName}/cloudwatch-logs
       TargetKeyId: !Ref CloudWatchLogsKmsKey
 
 Outputs:
   CloudWatchLogsKmsKeyArn:
-    Description: CloudWatch Logs KMS key ARN
+    Description: >
+      CloudWatch Logs の暗号化に利用する KMS キー ARN を出力します。
+      他スタックから参照できるように Export 名も付与します。
     Value: !GetAtt CloudWatchLogsKmsKey.Arn
     Export:
       Name: !Sub ${AWS::StackName}-CloudWatchLogsKmsKeyArn
