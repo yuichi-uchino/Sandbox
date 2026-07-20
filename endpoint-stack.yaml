@@ -43,6 +43,9 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-ecr-api-endpoint
 
   EcrDkrEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -66,6 +69,9 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-ecr-dkr-endpoint
 
   LogsEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -89,6 +95,9 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-logs-endpoint
 
   S3GatewayEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -106,6 +115,9 @@ Resources:
       RouteTableIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-PrivateAppRouteTableId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-s3-gateway-endpoint
 
   SSMEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -129,6 +141,9 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-ssm-endpoint
 
   SSMMessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -152,6 +167,9 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-ssmmessages-endpoint
 
   EC2MessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -175,3 +193,6 @@ Resources:
       SecurityGroupIds:
         - Fn::ImportValue:
             !Sub ${NetworkStackName}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-ec2messages-endpoint
