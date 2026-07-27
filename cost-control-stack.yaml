@@ -1,0 +1,274 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Environment:
+    Type: String
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、環境ごとの命名や設定切り替えに利用します。
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+  DestroyScheduleExpression:
+    Type: String
+    Description: >
+      EventBridge Scheduler cron expression.
+      The default value runs every day at 23:00.
+    Default: cron(0 23 * * ? *)
+
+  ScheduleTimezone:
+    Type: String
+    Description: >
+      Timezone for the EventBridge Scheduler cron expression.
+      The default value is Asia/Tokyo.
+    Default: Asia/Tokyo
+
+  KmsStackName:
+    Type: String
+    Description: >
+      StepFunctions 暗号化用の KMS キー ARN を Export している
+      CloudFormation スタック名を指定します。ロググループの KMS 暗号化設定で参照します。
+    Default: kms-stack
+
+  LogStackName:
+    Type: String
+    Description: >
+      CloudWatch Logs ロググループ ARN を Export している
+      CloudFormation スタック名を指定します。ステートマシンのログ設定で参照します。
+    Default: log-stack
+
+Resources:
+  DestroyStateMachineRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      Description: >
+        課金スタックを削除する Step Functions ステートマシンが使用する実行ロール。
+        課金スタックが増える度に対象リソースを追加する必要がある。
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-destroy-states-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+
+      Policies:
+        - PolicyName: DestroySchedulerPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              # CloudFormationスタックに対する操作権限
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DeleteStack
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/app-stack/*
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/endpoint-stack/*
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/alb-stack/*
+
+              # Describe系はResourceを絞れない
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                Resource: "*"
+
+              # EC2インスタンスの削除権限
+              - Effect: Allow
+                Action:
+                  - ec2:TerminateInstances
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
+
+              # 起動テンプレートの削除権限
+              - Effect: Allow
+                Action:
+                  - ec2:DeleteLaunchTemplate
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/*
+
+              # IAMインスタンスプロファイルの削除権限
+              - Effect: Allow
+                Action:
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:DeleteInstanceProfile
+                Resource:
+                  - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:instance-profile/app-stack-app-instance-profile
+
+              # IAMインスタンスプロファイルの削除権限
+              - Effect: Allow
+                Action:
+                  - iam:DeleteRole
+                  - iam:DeleteRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                  - iam:GetRole
+                Resource:
+                  - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/app-stack-app-instance-role
+
+        - PolicyName: KmsPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                Resource:
+                  Fn::ImportValue:
+                    !Sub ${KmsStackName}-StepFunctionsKmsKeyArn
+        - PolicyName: CloudWatchLogsDeliveryPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                Resource: "*"
+
+  DestroyEnvironmentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Metadata:
+      Description: >
+        課金スタックを削除する Step Functions ステートマシン。
+        課金スタックが増える度に対象リソースを追加する必要がある。
+    Properties:
+      StateMachineName: !Sub ${AWS::StackName}-destroy-environment-states
+      StateMachineType: STANDARD
+      RoleArn: !GetAtt DestroyStateMachineRole.Arn
+      EncryptionConfiguration:
+        Type: CUSTOMER_MANAGED_KMS_KEY
+        KmsKeyId:
+          Fn::ImportValue:
+            !Sub ${KmsStackName}-StepFunctionsKmsKeyArn
+      LoggingConfiguration:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn:
+                Fn::ImportValue:
+                  !Sub ${LogStackName}-StatesLogGroupArn
+        IncludeExecutionData: true
+        Level: ALL
+
+      Definition:
+        Comment: Delete stack and wait until the deletion is complete
+        QueryLanguage: JSONata
+        StartAt: DeleteStacks
+
+        States:
+          DeleteStacks:
+            Type: Map
+            Items: "{% $states.input.StackNames %}"
+
+            # リストの順番どおり、1スタックずつ処理する
+            MaxConcurrency: 1
+
+            ItemProcessor:
+              ProcessorConfig:
+                Mode: INLINE
+
+              StartAt: SetStackName
+
+              States:
+                SetStackName:
+                  Type: Pass
+                  Assign:
+                    stackName: "{% $states.input %}"
+                  Next: CheckStackExists
+
+                CheckStackExists:
+                  Type: Task
+                  Resource: arn:aws:states:::aws-sdk:cloudformation:describeStacks
+                  Arguments:
+                    StackName: "{% $stackName %}"
+                  Next: DeleteStack
+                  Catch:
+                    - ErrorEquals:
+                      - CloudFormation.CloudFormationException
+                      Output: "{% $states.errorOutput %}"
+                      Next: CheckStackExistsError
+
+                CheckStackExistsError:
+                  Type: Choice
+                  Choices:
+                    - Condition: >-
+                        {% $contains(
+                             $states.input.Cause,
+                             "does not exist"
+                           )
+                        %}
+                      Next: StackAlreadyDeleted
+                  Default: DescribeStackFailed
+
+                DeleteStack:
+                  Type: Task
+                  Resource: arn:aws:states:::aws-sdk:cloudformation:deleteStack
+                  Arguments:
+                    StackName: "{% $stackName %}"
+                  Next: WaitForDeletion
+
+                WaitForDeletion:
+                  Type: Wait
+                  Seconds: 30
+                  Next: DescribeDeletingStack
+
+                DescribeDeletingStack:
+                  Type: Task
+                  Resource: arn:aws:states:::aws-sdk:cloudformation:describeStacks
+                  Arguments:
+                    StackName: "{% $stackName %}"
+                  Next: CheckDeletionStatus
+                  Catch:
+                    - ErrorEquals:
+                        - CloudFormation.CloudFormationException
+                      Output: "{% $states.errorOutput %}"
+                      Next: CheckStackExistsError
+
+                CheckDeletionStatus:
+                  Type: Choice
+                  Choices:
+                    - Condition: >-
+                        {% $states.input.Stacks[0].StackStatus = "DELETE_IN_PROGRESS" %}
+                      Next: WaitForDeletion
+
+                    - Condition: >-
+                        {% $states.input.Stacks[0].StackStatus = "DELETE_FAILED" %}
+                      Next: DeletionFailed
+
+                  Default: UnexpectedStackStatus
+
+                StackAlreadyDeleted:
+                  Type: Succeed
+                  Output:
+                    StackName: "{% $stackName %}"
+                    Result: DELETED
+
+                DescribeStackFailed:
+                  Type: Fail
+                  Error: DescribeStackFailed
+                  Cause: DescribeStacks failed for an unexpected reason
+
+                DeletionFailed:
+                  Type: Fail
+                  Error: StackDeletionFailed
+                  Cause: CloudFormation stack entered DELETE_FAILED
+
+                UnexpectedStackStatus:
+                  Type: Fail
+                  Error: UnexpectedStackStatus
+                  Cause: CloudFormation stack entered an unexpected status
+
+            End: true
