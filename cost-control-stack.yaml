@@ -15,15 +15,15 @@ Parameters:
   DestroyScheduleExpression:
     Type: String
     Description: >
-      EventBridge Scheduler cron expression.
-      The default value runs every day at 23:00.
+      EventBridge Schedulerのcron式。 
+      デフォルト値は、毎日23:00に実行される設定です。
     Default: cron(0 23 * * ? *)
 
   ScheduleTimezone:
     Type: String
     Description: >
-      Timezone for the EventBridge Scheduler cron expression.
-      The default value is Asia/Tokyo.
+      EventBridge Scheduler の cron 式に使用するタイムゾーン。 
+      デフォルト値は Asia/Tokyo です。
     Default: Asia/Tokyo
 
   KmsStackName:
@@ -302,3 +302,51 @@ Resources:
                   Cause: CloudFormation stack entered an unexpected status
 
             End: true
+
+  DestroySchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-destroy-scheduler-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+
+      Policies:
+        - PolicyName: StartDestroyStateMachine
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource:
+                  - !GetAtt DestroyEnvironmentStateMachine.Arn
+
+  DestroyEnvironmentSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub ${AWS::StackName}-destroy-environment
+      Description: >
+        指定時刻に課金スタック削除用の
+        Step Functionsステートマシンを起動する。
+      State: ENABLED
+      ScheduleExpression: !Ref DestroyScheduleExpression
+      ScheduleExpressionTimezone: !Ref ScheduleTimezone
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Target:
+        Arn: !GetAtt DestroyEnvironmentStateMachine.Arn
+        RoleArn: !GetAtt DestroySchedulerRole.Arn
+
+        Input: |
+          {
+            "StackNames": [
+              "app-stack",
+              "endpoint-stack",
+              "alb-stack"
+            ]
+          }
