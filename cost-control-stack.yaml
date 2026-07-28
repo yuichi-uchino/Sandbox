@@ -72,10 +72,12 @@ Resources:
                   - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/endpoint-stack/*
                   - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/alb-stack/*
 
-              # Describe系はResourceを絞れない
+              # EC2インスタンス・VPCエンドポイントの削除権限（Describe系はResourceを絞れない）
               - Effect: Allow
                 Action:
                   - ec2:DescribeInstances
+                  - ec2:DescribeVpcEndpoints
+                  - elasticloadbalancing:DescribeListeners
                 Resource: "*"
 
               # EC2インスタンスの削除権限
@@ -111,6 +113,34 @@ Resources:
                   - iam:GetRole
                 Resource:
                   - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/app-stack-app-instance-role
+
+              # IAMインスタンスプロファイルの削除権限
+              - Effect: Allow
+                Action:
+                  - ec2:DeleteVpcEndpoints
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc-endpoint/*
+
+              # ALBリスナーの削除権限
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:DeleteListener
+                Resource:
+                  - !Sub arn:${AWS::Partition}:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:listener/app/*
+
+              # ターゲットグループの削除権限
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:DeleteTargetGroup
+                Resource:
+                  - !Sub arn:${AWS::Partition}:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:targetgroup/*
+
+              # ALBの削除権限
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:DeleteLoadBalancer
+                Resource:
+                  - !Sub arn:${AWS::Partition}:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:loadbalancer/*
 
         - PolicyName: KmsPolicy
           PolicyDocument:
