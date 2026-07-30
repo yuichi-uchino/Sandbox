@@ -212,12 +212,17 @@ Resources:
       Name: !Sub ${AWS::StackName}-distribution-config
       Distributions:
         - Region: !Ref AWS::Region
+
           AmiDistributionConfiguration:
             Name: !Sub ${AWS::StackName}-docker-al2023-{{ imagebuilder:buildDate }}
             Description: Docker-ready Amazon Linux 2023 AMI
             AmiTags:
               Name: !Sub ${AWS::StackName}-docker-al2023
               Environment: !Ref Environment
+
+          SsmParameterConfigurations:
+            - ParameterName: !Sub /imagebuilder/${AWS::StackName}/docker-al2023-ami-id
+              DataType: aws:ec2:image
 
   DockerImagePipeline:
     Type: AWS::ImageBuilder::ImagePipeline

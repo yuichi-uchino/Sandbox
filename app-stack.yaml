@@ -26,6 +26,13 @@ Parameters:
       Export している CloudFormation スタック名を指定します。
     Default: alb-stack
 
+  ImagebuilderStackName:
+    Type: String
+    Description: >
+      EC2 Image Builder で作成したカスタム AMI を Export している
+      CloudFormation スタック名を指定します。
+    Default: imagebuilder-stack
+
 #  EcrRepositoryName:
 #    Type: String
 #    Description: "The name of the ECR repository for the app image"
@@ -79,7 +86,7 @@ Resources:
     Properties:
       LaunchTemplateName: !Sub ${AWS::StackName}-app-lt
       LaunchTemplateData:
-        ImageId: ami-052a04fa021790f0e
+        ImageId: !Sub "{{resolve:ssm:/imagebuilder/${ImagebuilderStackName}/docker-al2023-ami-id}}"
         InstanceType: !Ref AppInstanceType
         IamInstanceProfile:
           Arn: !GetAtt AppInstanceProfile.Arn
