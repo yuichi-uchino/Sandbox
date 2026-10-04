@@ -12,13 +12,6 @@ Parameters:
       - prod
     Default: dev
 
-  NetworkStackName:
-    Type: String
-    Description: >
-      Image Builder のビルド用インスタンスを配置する VPC、サブネットなどの
-      ネットワークリソースを Export している CloudFormation スタック名を指定します。
-    Default: network-stack
-
   ImageBuilderInstanceType:
     Type: String
     Description: >
@@ -44,7 +37,7 @@ Resources:
       GroupDescription: Security group for EC2 Image Builder build instance
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       SecurityGroupEgress:
         - Description: Allow all outbound traffic
           IpProtocol: -1
@@ -193,7 +186,7 @@ Resources:
         - !Ref ImageBuilderInstanceType
       SubnetId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-PublicSubnetAId
+          !Sub ${Environment}-subnet
       SecurityGroupIds:
         - !Ref ImageBuilderSecurityGroup
       TerminateInstanceOnFailure: false
@@ -249,6 +242,3 @@ Resources:
         PipelineLogGroupName: !Sub /aws/imagebuilder/${AWS::StackName}/pipeline
       Tags:
         Environment: !Ref Environment
-      Schedule:
-        ScheduleExpression: cron(0 15 * * ? *) # 日本時間 0時に毎日実行
-

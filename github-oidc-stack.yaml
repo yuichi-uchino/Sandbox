@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Environment:
+    Type: String
+    Description: >
+      デプロイ対象の環境を指定します。dev は開発環境、stg はステージング環境、
+      prod は本番環境を表し、作成する AMI や関連リソースのタグ付けに利用します。
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+    Default: dev
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Metadata:
+      Description: >
+        GitHub Actions から AWS リソースにアクセスするための OIDC プロバイダーを作成します。
+        GitHub の OIDC トークンを使用して、IAM ロールを引き受けることができます。
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      Description: >
+        GitHub Actions から AWS リソースにアクセスするための IAM ロールを作成します。
+        OIDC プロバイダーを使用して、GitHub Actions ワークフローがこのロールを引き受けることができます。
+    Properties:
+      RoleName: github-actions-imagebuilder-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProvider
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub:
+                  - repo:yuichi-uchino/Sandbox:ref:refs/heads/main
+      Policies:
+        - PolicyName: GitHubActionsImageBuilderPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - imagebuilder:StartImagePipelineExecution
+                  - imagebuilder:GetImage
+                Resource: "*"
