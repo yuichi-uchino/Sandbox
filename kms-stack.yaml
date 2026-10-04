@@ -71,7 +71,7 @@ Resources:
         CloudWatch Logs 用 KMS キーを参照しやすくするためのエイリアスを作成します。
         スタック名を含む alias パスを付けることで、環境や用途ごとのキーを識別しやすくします。
     Properties:
-      AliasName: !Sub alias/${AWS::StackName}/cloudwatch-logs
+      AliasName: !Sub alias/${Environment}/cloudwatch-logs
       TargetKeyId: !Ref CloudWatchLogsKmsKey
 
   StepFunctionsKmsKey:
@@ -116,7 +116,7 @@ Resources:
         Step Functions 用 KMS キーを参照しやすくするためのエイリアスを作成します。
         スタック名を含む alias パスを付けることで、環境や用途ごとのキーを識別しやすくします。
     Properties:
-      AliasName: !Sub alias/${AWS::StackName}/step-functions
+      AliasName: !Sub alias/${Environment}/step-functions
       TargetKeyId: !Ref StepFunctionsKmsKey
 
 Outputs:
@@ -126,11 +126,11 @@ Outputs:
       他スタックから参照できるように Export 名も付与します。
     Value: !GetAtt CloudWatchLogsKmsKey.Arn
     Export:
-      Name: !Sub ${AWS::StackName}-CloudWatchLogsKmsKeyArn
+      Name: !Sub ${Environment}-CloudWatchLogsKmsKeyArn
   StepFunctionsKmsKeyArn:
     Description: >
       Step Functions の暗号化に利用する KMS キー ARN を出力します。
       他スタックから参照できるように Export 名も付与します。
     Value: !GetAtt StepFunctionsKmsKey.Arn
     Export:
-      Name: !Sub ${AWS::StackName}-StepFunctionsKmsKeyArn
+      Name: !Sub ${Environment}-StepFunctionsKmsKeyArn

@@ -12,14 +12,6 @@ Parameters:
       - prod
     Default: dev
 
-  NetworkStackName:
-    Type: String
-    Description: >
-      VPC、プライベートサブネット、ルートテーブル、エンドポイント用
-      セキュリティグループなどのネットワークリソースを Export している
-      CloudFormation スタック名を指定します。
-    Default: network-stack
-
 Resources:
   EcrApiEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -31,21 +23,21 @@ Resources:
     Properties:
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       VpcEndpointType: Interface
       ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
       PrivateDnsEnabled: true
       SubnetIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+            !Sub ${Environment}-PrivateAppSubnetAId
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+            !Sub ${Environment}-PrivateAppSubnetCId
       SecurityGroupIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+            !Sub ${Environment}-EndpointSecurityGroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-ecr-api-endpoint
+          Value: !Sub ${Environment}-ecr-api-endpoint
 
   EcrDkrEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -57,21 +49,21 @@ Resources:
     Properties:
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       VpcEndpointType: Interface
       ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
       PrivateDnsEnabled: true
       SubnetIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+            !Sub ${Environment}-PrivateAppSubnetAId
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+            !Sub ${Environment}-PrivateAppSubnetCId
       SecurityGroupIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+            !Sub ${Environment}-EndpointSecurityGroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-ecr-dkr-endpoint
+          Value: !Sub ${Environment}-ecr-dkr-endpoint
 
   LogsEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -83,21 +75,73 @@ Resources:
     Properties:
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       VpcEndpointType: Interface
       ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
       PrivateDnsEnabled: true
       SubnetIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+            !Sub ${Environment}-PrivateAppSubnetAId
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+            !Sub ${Environment}-PrivateAppSubnetCId
       SecurityGroupIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+            !Sub ${Environment}-EndpointSecurityGroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-logs-endpoint
+          Value: !Sub ${Environment}-logs-endpoint
+
+  ImageBuilderEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        プライベートサブネット内の EC2 Image Builder ビルドインスタンスから
+        Image Builder API へ VPC 内経由でアクセスするための Interface VPC Endpoint を
+        作成します。NAT Gateway を使用せずにビルドコンポーネントを取得できるようにします。
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${Environment}-VPCId
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.imagebuilder
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${Environment}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${Environment}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${Environment}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-imagebuilder-endpoint
+
+  InspectorTelemetryEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Metadata:
+      Description: >
+        NAT Gateway を使用しないプライベートサブネット内の EC2 インスタンスから、
+        Amazon Inspector VM Scanner のスキャン情報を送信するための
+        Interface VPC Endpoint を作成します。
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${Environment}-VPCId
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.inspector2-telemetry
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${Environment}-PrivateAppSubnetAId
+        - Fn::ImportValue:
+            !Sub ${Environment}-PrivateAppSubnetCId
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${Environment}-EndpointSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-inspector2-telemetry-endpoint
 
   S3GatewayEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -109,15 +153,15 @@ Resources:
     Properties:
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       VpcEndpointType: Gateway
       ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
       RouteTableIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppRouteTableId
+            !Sub ${Environment}-PrivateAppRouteTableId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-s3-gateway-endpoint
+          Value: !Sub ${Environment}-s3-gateway-endpoint
 
   SSMEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -132,18 +176,18 @@ Resources:
       PrivateDnsEnabled: true
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       SubnetIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+            !Sub ${Environment}-PrivateAppSubnetAId
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+            !Sub ${Environment}-PrivateAppSubnetCId
       SecurityGroupIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+            !Sub ${Environment}-EndpointSecurityGroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-ssm-endpoint
+          Value: !Sub ${Environment}-ssm-endpoint
 
   SSMMessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -158,18 +202,18 @@ Resources:
       PrivateDnsEnabled: true
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       SubnetIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+            !Sub ${Environment}-PrivateAppSubnetAId
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+            !Sub ${Environment}-PrivateAppSubnetCId
       SecurityGroupIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+            !Sub ${Environment}-EndpointSecurityGroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-ssmmessages-endpoint
+          Value: !Sub ${Environment}-ssmmessages-endpoint
 
   EC2MessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -184,15 +228,15 @@ Resources:
       PrivateDnsEnabled: true
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       SubnetIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetAId
+            !Sub ${Environment}-PrivateAppSubnetAId
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PrivateAppSubnetCId
+            !Sub ${Environment}-PrivateAppSubnetCId
       SecurityGroupIds:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-EndpointSecurityGroupId
+            !Sub ${Environment}-EndpointSecurityGroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-ec2messages-endpoint
+          Value: !Sub ${Environment}-ec2messages-endpoint

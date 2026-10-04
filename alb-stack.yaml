@@ -12,13 +12,6 @@ Parameters:
       - prod
     Default: dev
 
-  NetworkStackName:
-    Type: String
-    Description: >
-      VPC、パブリックサブネット、ALB 用セキュリティグループなどのネットワーク
-      リソースを Export している CloudFormation スタック名を指定します。
-    Default: network-stack
-
   AppPort:
     Type: Number
     Description: >
@@ -42,18 +35,18 @@ Resources:
         ネットワークスタックからインポートしたパブリックサブネットと
         セキュリティグループを使用し、HTTP リクエストを受け付ける入口になります。
     Properties:
-      Name: !Sub ${AWS::StackName}-alb
+      Name: !Sub ${Environment}-alb
       Type: application
       Scheme: internet-facing
       IpAddressType: ipv4
       SecurityGroups:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-ALBSecurityGroupId
+            !Sub ${Environment}-ALBSecurityGroupId
       Subnets:
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PublicSubnetAId
+            !Sub ${Environment}-PublicSubnetAId
         - Fn::ImportValue:
-            !Sub ${NetworkStackName}-PublicSubnetCId
+            !Sub ${Environment}-PublicSubnetCId
       LoadBalancerAttributes:
         - Key: routing.http.drop_invalid_header_fields.enabled
           Value: true
@@ -66,11 +59,11 @@ Resources:
         グループを作成します。指定されたアプリケーションポートとヘルスチェックパスを
         使って、登録されたインスタンスの稼働状態を判定します。
     Properties:
-      Name: !Sub ${AWS::StackName}-tg
+      Name: !Sub ${Environment}-tg
       TargetType: instance
       VpcId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-VPCId
+          !Sub ${Environment}-VPCId
       Protocol: HTTP
       Port: !Ref AppPort
       HealthCheckProtocol: HTTP
@@ -100,12 +93,12 @@ Outputs:
   AlbArn:
     Value: !Ref ApplicationLoadBalancer
     Export:
-      Name: !Sub ${AWS::StackName}-AlbArn
+      Name: !Sub ${Environment}-AlbArn
 
   AlbDnsName:
     Value: !GetAtt ApplicationLoadBalancer.DNSName
     Export:
-      Name: !Sub ${AWS::StackName}-AlbDnsName
+      Name: !Sub ${Environment}-AlbDnsName
 
   AlbUrl:
     Value: !Sub http://${ApplicationLoadBalancer.DNSName}
@@ -113,9 +106,9 @@ Outputs:
   TargetGroupArn:
     Value: !Ref AppTargetGroup
     Export:
-      Name: !Sub ${AWS::StackName}-TargetGroupArn
+      Name: !Sub ${Environment}-TargetGroupArn
 
   ListenerArn:
     Value: !Ref HttpListener
     Export:
-      Name: !Sub ${AWS::StackName}-HttpListenerArn
+      Name: !Sub ${Environment}-HttpListenerArn

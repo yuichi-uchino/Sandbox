@@ -12,13 +12,6 @@ Parameters:
       - prod
     Default: dev
 
-  KmsStackName:
-    Type: String
-    Description: >
-      VPC Flow Logs のロググループ暗号化に利用する KMS キー ARN を Export している
-      CloudFormation スタック名を指定します。
-    Default: kms-stack
-
 Mappings:
   EnvironmentMap:
     dev:
@@ -61,7 +54,7 @@ Resources:
       InstanceTenancy: default # デフォルト値を明示的に宣言
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-vpc
+          Value: !Sub ${Environment}-vpc
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
@@ -75,7 +68,7 @@ Resources:
       AvailabilityZone: !Select ["0", !GetAZs '']
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-public-subnet-a
+          Value: !Sub ${Environment}-public-subnet-a
 
   PublicSubnetC:
     Type: AWS::EC2::Subnet
@@ -89,7 +82,7 @@ Resources:
       AvailabilityZone: !Select [ "1", !GetAZs '' ]
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-public-subnet-c
+          Value: !Sub ${Environment}-public-subnet-c
 
   PrivateAppSubnetA:
     Type: AWS::EC2::Subnet
@@ -104,7 +97,7 @@ Resources:
       AvailabilityZone: !Select ["0", !GetAZs '']
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-private-app-subnet-a
+          Value: !Sub ${Environment}-private-app-subnet-a
 
   PrivateAppSubnetC:
     Type: AWS::EC2::Subnet
@@ -118,7 +111,7 @@ Resources:
       AvailabilityZone: !Select [ "1", !GetAZs '' ]
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-private-app-subnet-c
+          Value: !Sub ${Environment}-private-app-subnet-c
 
   PrivateDBSubnetA:
     Type: AWS::EC2::Subnet
@@ -132,7 +125,7 @@ Resources:
       AvailabilityZone: !Select ["0", !GetAZs '']
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-private-db-subnet-a
+          Value: !Sub ${Environment}-private-db-subnet-a
 
   PrivateDBSubnetC:
     Type: AWS::EC2::Subnet
@@ -146,7 +139,7 @@ Resources:
       AvailabilityZone: !Select [ "1", !GetAZs '' ]
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-private-db-subnet-c
+          Value: !Sub ${Environment}-private-db-subnet-c
 
   VPCFlowLogGroup:
     Type: AWS::Logs::LogGroup
@@ -158,11 +151,11 @@ Resources:
         ログは 7 日間保持し、KMS スタックからインポートした KMS キーで暗号化します。
         スタック削除や置換時にもログを保持します。
     Properties:
-      LogGroupName: !Sub /aws/vpcflowlogs/${AWS::StackName}
+      LogGroupName: !Sub /aws/vpcflowlogs/${Environment}
       RetentionInDays: 7
       KmsKeyId:
         Fn::ImportValue:
-          !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
+          !Sub ${Environment}-CloudWatchLogsKmsKeyArn
 
   VPCFlowLogsRole:
     Type: AWS::IAM::Role
@@ -186,7 +179,7 @@ Resources:
         VPC Flow Logs ロールに付与する IAM 管理ポリシーを作成します。
         対象ロググループへのログストリーム作成とログイベント書き込みを許可します。
     Properties:
-      ManagedPolicyName: !Sub ${AWS::StackName}-vpc-flow-logs-policy
+      ManagedPolicyName: !Sub ${Environment}-vpc-flow-logs-policy
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -194,7 +187,7 @@ Resources:
             Action:
               - logs:CreateLogStream
               - logs:PutLogEvents
-            Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vpcflowlogs/${AWS::StackName}:*
+            Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vpcflowlogs/${Environment}:*
       Roles:
         - !Ref VPCFlowLogsRole
 
@@ -222,7 +215,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-igw
+          Value: !Sub ${Environment}-igw
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -244,7 +237,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-public-rt
+          Value: !Sub ${Environment}-public-rt
 
   PublicRoute:
     Type: AWS::EC2::Route
@@ -288,7 +281,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-private-app-rt
+          Value: !Sub ${Environment}-private-app-rt
 
   PrivateDBRouteTable:
     Type: AWS::EC2::RouteTable
@@ -300,7 +293,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-private-db-rt
+          Value: !Sub ${Environment}-private-db-rt
 
   PrivateAppSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -355,7 +348,7 @@ Resources:
       SecurityGroupEgress: []
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-alb-sg
+          Value: !Sub ${Environment}-alb-sg
 
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -370,7 +363,7 @@ Resources:
       SecurityGroupEgress: []
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-app-sg
+          Value: !Sub ${Environment}-app-sg
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -385,7 +378,7 @@ Resources:
       SecurityGroupEgress: []
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-db-sg
+          Value: !Sub ${Environment}-db-sg
 
   EndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -399,7 +392,7 @@ Resources:
       SecurityGroupEgress: [ ]
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-endpoint-sg
+          Value: !Sub ${Environment}-endpoint-sg
 
   ALBIngressHttpRule:
     Type: AWS::EC2::SecurityGroupIngress
@@ -510,64 +503,64 @@ Outputs:
   VPCId:
     Value: !Ref VPC
     Export:
-      Name: !Sub ${AWS::StackName}-VPCId
+      Name: !Sub ${Environment}-VPCId
 
   PublicSubnetAId:
     Value: !Ref PublicSubnetA
     Export:
-      Name: !Sub ${AWS::StackName}-PublicSubnetAId
+      Name: !Sub ${Environment}-PublicSubnetAId
 
   PublicSubnetCId:
     Value: !Ref PublicSubnetC
     Export:
-      Name: !Sub ${AWS::StackName}-PublicSubnetCId
+      Name: !Sub ${Environment}-PublicSubnetCId
 
   PrivateAppSubnetAId:
     Value: !Ref PrivateAppSubnetA
     Export:
-      Name: !Sub ${AWS::StackName}-PrivateAppSubnetAId
+      Name: !Sub ${Environment}-PrivateAppSubnetAId
 
   PrivateAppSubnetCId:
     Value: !Ref PrivateAppSubnetC
     Export:
-      Name: !Sub ${AWS::StackName}-PrivateAppSubnetCId
+      Name: !Sub ${Environment}-PrivateAppSubnetCId
 
   PrivateDBSubnetAId:
     Value: !Ref PrivateDBSubnetA
     Export:
-      Name: !Sub ${AWS::StackName}-PrivateDBSubnetAId
+      Name: !Sub ${Environment}-PrivateDBSubnetAId
 
   PrivateDBSubnetCId:
     Value: !Ref PrivateDBSubnetC
     Export:
-      Name: !Sub ${AWS::StackName}-PrivateDBSubnetCId
+      Name: !Sub ${Environment}-PrivateDBSubnetCId
 
   PrivateAppRouteTableId:
     Value: !Ref PrivateAppRouteTable
     Export:
-      Name: !Sub ${AWS::StackName}-PrivateAppRouteTableId
+      Name: !Sub ${Environment}-PrivateAppRouteTableId
 
   PrivateDBRouteTableId:
     Value: !Ref PrivateDBRouteTable
     Export:
-      Name: !Sub ${AWS::StackName}-PrivateDBRouteTableId
+      Name: !Sub ${Environment}-PrivateDBRouteTableId
 
   ALBSecurityGroupId:
     Value: !Ref ALBSecurityGroup
     Export:
-      Name: !Sub ${AWS::StackName}-ALBSecurityGroupId
+      Name: !Sub ${Environment}-ALBSecurityGroupId
 
   AppSecurityGroupId:
     Value: !Ref AppSecurityGroup
     Export:
-      Name: !Sub ${AWS::StackName}-AppSecurityGroupId
+      Name: !Sub ${Environment}-AppSecurityGroupId
 
   DBSecurityGroupId:
     Value: !Ref DBSecurityGroup
     Export:
-      Name: !Sub ${AWS::StackName}-DBSecurityGroupId
+      Name: !Sub ${Environment}-DBSecurityGroupId
 
   EndpointSecurityGroupId:
     Value: !Ref EndpointSecurityGroup
     Export:
-      Name: !Sub ${AWS::StackName}-EndpointSecurityGroupId
+      Name: !Sub ${Environment}-EndpointSecurityGroupId

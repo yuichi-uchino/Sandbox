@@ -12,27 +12,6 @@ Parameters:
       - prod
     Default: dev
 
-  NetworkStackName:
-    Type: String
-    Description: >
-      VPC、アプリケーション用サブネット、EC2 用セキュリティグループなどの
-      ネットワークリソースを Export している CloudFormation スタック名を指定します。
-    Default: network-stack
-
-  AlbStackName:
-    Type: String
-    Description: >
-      Application Load Balancer やターゲットグループなどの ALB 関連リソースを
-      Export している CloudFormation スタック名を指定します。
-    Default: alb-stack
-
-  ImagebuilderStackName:
-    Type: String
-    Description: >
-      EC2 Image Builder で作成したカスタム AMI を Export している
-      CloudFormation スタック名を指定します。
-    Default: imagebuilder-stack
-
 #  EcrRepositoryName:
 #    Type: String
 #    Description: "The name of the ECR repository for the app image"
@@ -53,7 +32,7 @@ Resources:
         EC2 がこのロールを引き受け、Systems Manager 経由で管理できるように
         AmazonSSMManagedInstanceCore 管理ポリシーを関連付けます。
     Properties:
-      RoleName: !Sub ${AWS::StackName}-app-instance-role
+      RoleName: !Sub ${Environment}-app-instance-role
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -72,7 +51,7 @@ Resources:
         インスタンスプロファイルを作成します。起動テンプレートから参照され、
         インスタンス起動時に AppInstanceRole を関連付けます。
     Properties:
-      InstanceProfileName: !Sub ${AWS::StackName}-app-instance-profile
+      InstanceProfileName: !Sub ${Environment}-app-instance-profile
       Roles:
         - !Ref AppInstanceRole
 
@@ -84,15 +63,15 @@ Resources:
         作成します。AMI、インスタンスタイプ、IAM インスタンスプロファイル、
         セキュリティグループ、ユーザーデータ、IMDSv2 必須設定を定義します。
     Properties:
-      LaunchTemplateName: !Sub ${AWS::StackName}-app-lt
+      LaunchTemplateName: !Sub ${Environment}-app-lt
       LaunchTemplateData:
-        ImageId: !Sub "{{resolve:ssm:/imagebuilder/${ImagebuilderStackName}/docker-al2023-ami-id}}"
+        ImageId: !Sub "{{resolve:ssm:/imagebuilder/${Environment}/docker-al2023-ami-id}}"
         InstanceType: !Ref AppInstanceType
         IamInstanceProfile:
           Arn: !GetAtt AppInstanceProfile.Arn
         SecurityGroupIds:
           - Fn::ImportValue:
-              !Sub ${NetworkStackName}-AppSecurityGroupId
+              !Sub ${Environment}-AppSecurityGroupId
         UserData:
           Fn::Base64: |
             #!/bin/bash
@@ -112,7 +91,7 @@ Resources:
         Version: !GetAtt AppLaunchTemplate.LatestVersionNumber
       SubnetId:
         Fn::ImportValue:
-          !Sub ${NetworkStackName}-PrivateAppSubnetAId
+          !Sub ${Environment}-PrivateAppSubnetAId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-app-instance
+          Value: !Sub ${Environment}-app-instance

@@ -12,13 +12,6 @@ Parameters:
       - prod
     Default: dev
 
-  KmsStackName:
-    Type: String
-    Description: >
-      CloudWatch Logs 暗号化用の KMS キー ARN を Export している
-      CloudFormation スタック名を指定します。ロググループの KMS 暗号化設定で参照します。
-    Default: kms-stack
-
 Resources:
   AppLogGroup:
     Type: AWS::Logs::LogGroup
@@ -30,11 +23,11 @@ Resources:
         ロググループを作成します。ログは 7 日間保持し、KMS スタックから
         インポートした KMS キーで暗号化します。スタック削除や置換時にもログを保持します。
     Properties:
-      LogGroupName: !Sub /aws/ec2/${AWS::StackName}
+      LogGroupName: !Sub /aws/ec2/${Environment}
       RetentionInDays: 7
       KmsKeyId:
         Fn::ImportValue:
-          !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
+          !Sub ${Environment}-CloudWatchLogsKmsKeyArn
 
   StatesLogGroup:
     Type: AWS::Logs::LogGroup
@@ -46,11 +39,11 @@ Resources:
         ロググループを作成します。ログは 7 日間保持し、KMS スタックから
         インポートした KMS キーで暗号化します。スタック削除や置換時にもログを保持します。
     Properties:
-      LogGroupName: !Sub /aws/states/${AWS::StackName}
+      LogGroupName: !Sub /aws/states/${Environment}
       RetentionInDays: 7
       KmsKeyId:
         Fn::ImportValue:
-          !Sub ${KmsStackName}-CloudWatchLogsKmsKeyArn
+          !Sub ${Environment}-CloudWatchLogsKmsKeyArn
 
 Outputs:
   StatesLogGroupArn:
@@ -59,4 +52,4 @@ Outputs:
       ステートマシンのログ設定で参照します。
     Value: !GetAtt StatesLogGroup.Arn
     Export:
-      Name: !Sub ${AWS::StackName}-StatesLogGroupArn
+      Name: !Sub ${Environment}-StatesLogGroupArn

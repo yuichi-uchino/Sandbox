@@ -19,13 +19,6 @@ Parameters:
       インスタンスタイプを指定します。ビルド処理に必要な性能とコストに応じて調整します。
     Default: t2.micro
 
-  ParentImage:
-    Type: AWS::EC2::Image::Id
-    Default: ami-0a371542ad09d2434 # Amazon Linux 2023 kernel-6.1 AMI 64 ビット (x86), uefi-preferred
-    Description: >
-      EC2 Image Builder がカスタム AMI を作成する際のベース AMI ID を指定します。
-      既定値は Amazon Linux 2023 の AMI で、OS 更新や Docker インストールの元になります。
-
 Resources:
   ImageBuilderSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -44,9 +37,24 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-imagebuilder-sg
+          Value: !Sub ${Environment}-imagebuilder-sg
         - Key: Environment
           Value: !Ref Environment
+
+  EndpointIngressFromImageBuilderHttpsRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      Description: >
+        Interface VPC Endpoint が Image Builder のビルドインスタンスからの
+        HTTPS 443 番ポート通信を受け付けることを許可します。
+    Properties:
+      GroupId:
+        Fn::ImportValue:
+          !Sub ${Environment}-EndpointSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref ImageBuilderSecurityGroup
 
   ImageBuilderInstanceRole:
     Type: AWS::IAM::Role
@@ -56,7 +64,7 @@ Resources:
         Image Builder のビルド処理に必要な権限と、Systems Manager 経由で管理するための
         権限を管理ポリシーとして関連付けます。
     Properties:
-      RoleName: !Sub ${AWS::StackName}-imagebuilder-instance-role
+      RoleName: !Sub ${Environment}-imagebuilder-instance-role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -76,7 +84,7 @@ Resources:
         インスタンスプロファイルを作成します。インフラストラクチャ設定から参照され、
         ビルドインスタンス起動時に ImageBuilderInstanceRole を関連付けます。
     Properties:
-      InstanceProfileName: !Sub ${AWS::StackName}-imagebuilder-instance-profile
+      InstanceProfileName: !Sub ${Environment}-imagebuilder-instance-profile
       Roles:
         - !Ref ImageBuilderInstanceRole
 
@@ -88,7 +96,7 @@ Resources:
         作成します。AMI 作成の build フェーズで dnf update を実行し、
         ベースイメージのパッケージを最新化します。
     Properties:
-      Name: !Sub ${AWS::StackName}-update-os
+      Name: !Sub ${Environment}-update-os
       Platform: Linux
       Version: 1.0.0
       Description: Update OS packages on Amazon Linux 2023
@@ -112,7 +120,7 @@ Resources:
         Image Builder コンポーネントを作成します。validate と test フェーズで
         Docker のバージョン確認とサービス状態確認を行います。
     Properties:
-      Name: !Sub ${AWS::StackName}-install-docker
+      Name: !Sub ${Environment}-install-docker
       Platform: Linux
       Version: 1.0.2
       Description: Install Docker on Amazon Linux 2023
@@ -155,10 +163,10 @@ Resources:
         Image Builder イメージレシピを定義します。親 AMI、OS 更新コンポーネント、
         Docker インストールコンポーネント、ルートボリューム設定、AMI タグをまとめます。
     Properties:
-      Name: !Sub ${AWS::StackName}-docker-al2023-recipe
-      Version: 1.0.2
-      Description: "Add Test stages"
-      ParentImage: !Ref ParentImage
+      Name: !Sub ${Environment}-docker-al2023-recipe
+      Version: 1.0.3
+      Description: "Use the latest Amazon Linux 2023 base image"
+      ParentImage: ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
       Components:
         - ComponentArn: !Ref UpdateOsComponent
         - ComponentArn: !Ref InstallDockerComponent
@@ -169,7 +177,7 @@ Resources:
             VolumeType: gp3
             DeleteOnTermination: true
       AmiTags:
-        Name: !Sub ${AWS::StackName}-docker-al2023-ami
+        Name: !Sub ${Environment}-docker-al2023-ami
         Environment: !Ref Environment
 
   ImageBuilderInfrastructureConfiguration:
@@ -180,16 +188,16 @@ Resources:
         インスタンスプロファイル、インスタンスタイプ、配置先サブネット、
         セキュリティグループ、失敗時のインスタンス保持、IMDSv2 必須設定を定義します。
     Properties:
-      Name: !Sub ${AWS::StackName}-infra-config
+      Name: !Sub ${Environment}-infra-config
       InstanceProfileName: !Ref ImageBuilderInstanceProfile
       InstanceTypes:
         - !Ref ImageBuilderInstanceType
       SubnetId:
         Fn::ImportValue:
-          !Sub ${Environment}-subnet
+          !Sub ${Environment}-PrivateAppSubnetAId
       SecurityGroupIds:
         - !Ref ImageBuilderSecurityGroup
-      TerminateInstanceOnFailure: false
+      TerminateInstanceOnFailure: true
       InstanceMetadataOptions:
         HttpTokens: required
         HttpPutResponseHopLimit: 2
@@ -202,19 +210,19 @@ Resources:
         現在のリージョンへ AMI を作成し、ビルド日を含む AMI 名、
         説明文、環境タグを付与します。
     Properties:
-      Name: !Sub ${AWS::StackName}-distribution-config
+      Name: !Sub ${Environment}-distribution-config
       Distributions:
         - Region: !Ref AWS::Region
 
           AmiDistributionConfiguration:
-            Name: !Sub ${AWS::StackName}-docker-al2023-{{ imagebuilder:buildDate }}
+            Name: !Sub ${Environment}-docker-al2023-{{ imagebuilder:buildDate }}
             Description: Docker-ready Amazon Linux 2023 AMI
             AmiTags:
-              Name: !Sub ${AWS::StackName}-docker-al2023
+              Name: !Sub ${Environment}-docker-al2023
               Environment: !Ref Environment
 
           SsmParameterConfigurations:
-            - ParameterName: !Sub /imagebuilder/${AWS::StackName}/docker-al2023-ami-id
+            - ParameterName: !Sub /imagebuilder/${Environment}/docker-al2023-ami-id
               DataType: aws:ec2:image
 
   DockerImagePipeline:
@@ -226,19 +234,22 @@ Resources:
         インフラストラクチャ設定、配布設定を関連付け、イメージスキャン、
         テスト、ログ出力を有効化します。
     Properties:
-      Name: !Sub ${AWS::StackName}-docker-al2023-pipeline
+      Name: !Sub ${Environment}-docker-al2023-pipeline
       Description: "Pipeline to build Docker-ready Amazon Linux 2023 AMI"
       ImageRecipeArn: !Ref DockerImageRecipe
       InfrastructureConfigurationArn: !Ref ImageBuilderInfrastructureConfiguration
       DistributionConfigurationArn: !Ref DockerAmiDistributionConfiguration
       Status: ENABLED
+      Schedule:
+        ScheduleExpression: cron(0 18 * * ? *)
+        PipelineExecutionStartCondition: EXPRESSION_MATCH_AND_DEPENDENCY_UPDATES_AVAILABLE
       ImageScanningConfiguration:
         ImageScanningEnabled: true
       ImageTestsConfiguration:
         ImageTestsEnabled: true
         TimeoutMinutes: 60
       LoggingConfiguration:
-        ImageLogGroupName: !Sub /aws/imagebuilder/${AWS::StackName}/image
-        PipelineLogGroupName: !Sub /aws/imagebuilder/${AWS::StackName}/pipeline
+        ImageLogGroupName: !Sub /aws/imagebuilder/${Environment}/image
+        PipelineLogGroupName: !Sub /aws/imagebuilder/${Environment}/pipeline
       Tags:
         Environment: !Ref Environment

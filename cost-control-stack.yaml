@@ -26,20 +26,6 @@ Parameters:
       デフォルト値は Asia/Tokyo です。
     Default: Asia/Tokyo
 
-  KmsStackName:
-    Type: String
-    Description: >
-      StepFunctions 暗号化用の KMS キー ARN を Export している
-      CloudFormation スタック名を指定します。ロググループの KMS 暗号化設定で参照します。
-    Default: kms-stack
-
-  LogStackName:
-    Type: String
-    Description: >
-      CloudWatch Logs ロググループ ARN を Export している
-      CloudFormation スタック名を指定します。ステートマシンのログ設定で参照します。
-    Default: log-stack
-
 Resources:
   DestroyStateMachineRole:
     Type: AWS::IAM::Role
@@ -48,7 +34,7 @@ Resources:
         課金スタックを削除する Step Functions ステートマシンが使用する実行ロール。
         課金スタックが増える度に対象リソースを追加する必要がある。
     Properties:
-      RoleName: !Sub ${AWS::StackName}-destroy-states-role
+      RoleName: !Sub ${Environment}-destroy-states-role
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -152,7 +138,7 @@ Resources:
                   - kms:GenerateDataKey
                 Resource:
                   Fn::ImportValue:
-                    !Sub ${KmsStackName}-StepFunctionsKmsKeyArn
+                    !Sub ${Environment}-StepFunctionsKmsKeyArn
         - PolicyName: CloudWatchLogsDeliveryPolicy
           PolicyDocument:
             Version: 2012-10-17
@@ -176,20 +162,20 @@ Resources:
         課金スタックを削除する Step Functions ステートマシン。
         課金スタックが増える度に対象リソースを追加する必要がある。
     Properties:
-      StateMachineName: !Sub ${AWS::StackName}-destroy-environment-states
+      StateMachineName: !Sub ${Environment}-destroy-environment-states
       StateMachineType: STANDARD
       RoleArn: !GetAtt DestroyStateMachineRole.Arn
       EncryptionConfiguration:
         Type: CUSTOMER_MANAGED_KMS_KEY
         KmsKeyId:
           Fn::ImportValue:
-            !Sub ${KmsStackName}-StepFunctionsKmsKeyArn
+            !Sub ${Environment}-StepFunctionsKmsKeyArn
       LoggingConfiguration:
         Destinations:
           - CloudWatchLogsLogGroup:
               LogGroupArn:
                 Fn::ImportValue:
-                  !Sub ${LogStackName}-StatesLogGroupArn
+                  !Sub ${Environment}-StatesLogGroupArn
         IncludeExecutionData: true
         Level: ALL
 
@@ -306,7 +292,7 @@ Resources:
   DestroySchedulerRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-destroy-scheduler-role
+      RoleName: !Sub ${Environment}-destroy-scheduler-role
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -329,7 +315,7 @@ Resources:
   DestroyEnvironmentSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      Name: !Sub ${AWS::StackName}-destroy-environment
+      Name: !Sub ${Environment}-destroy-environment
       Description: >
         指定時刻に課金スタック削除用の
         Step Functionsステートマシンを起動する。
